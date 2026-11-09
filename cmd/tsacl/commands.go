@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"io"
 	"log/slog"
@@ -107,6 +108,7 @@ func addSubcommands(root *cobra.Command, deps *commandDeps) {
 		newPlanCommand(deps),
 		newUploadCommand(deps),
 	)
+	wrapMutations(root, deps)
 	declareNonDeterministic(root)
 }
 func newNodeAttrAddCommand(deps *commandDeps) *cobra.Command {
@@ -618,12 +620,22 @@ func newMergeCommand(deps *commandDeps) *cobra.Command {
 			"one snippet into a base policy, keeping the base's HuJSON comments and the comments on keys the\n" +
 			"snippet adds.",
 		Args: cobra.NoArgs,
-		RunE: func(_ *cobra.Command, _ []string) error {
-			out, err := runMerge(mergeRequest{
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			request := mergeRequest{
 				file: deps.opts.file, dirs: []string(dirs), base: base, add: add, out: outPath,
-			})
-			*deps.result = out
-			return err
+			}
+			return ax.PerformWithAudit(cmd.Context(), cmd.CommandPath(),
+				func(context.Context) error {
+					out, err := rehearseMerge(request)
+					*deps.result = out
+					return err
+				},
+				func(context.Context) error {
+					out, err := runMerge(request)
+					*deps.result = out
+					return err
+				},
+			)
 		},
 	}
 	cmd.Flags().Var(&dirs, "dir", "directory containing ACL files; may be repeated")
@@ -858,16 +870,30 @@ func newUploadCommand(deps *commandDeps) *cobra.Command {
 		Short: "Upload the policy to the tailnet",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			out, err := runUpload(
-				cmd.Context(),
-				*deps.opts,
-				cmd.Flags().Changed("if-match"),
-				acceptRemoteChanges,
-				deps.httpClient,
-				deps.apiURL,
+			ctx := cmd.Context()
+			ifMatchExplicit := cmd.Flags().Changed("if-match")
+			if !ax.DryRunFromContext(cmd.Context()) {
+				subject := "upload " + deps.opts.file + " to tailnet " + deps.opts.tailnet
+				if _, err := ax.Confirm(cmd.Context(), subject); err != nil {
+					return err
+				}
+			}
+			return ax.PerformWithAudit(cmd.Context(), cmd.CommandPath(),
+				func(rehearseCtx context.Context) error {
+					out, err := rehearseUpload(
+						rehearseCtx, *deps.opts, ifMatchExplicit, acceptRemoteChanges, deps.httpClient, deps.apiURL,
+					)
+					*deps.result = out
+					return err
+				},
+				func(context.Context) error {
+					out, err := runUpload(
+						ctx, *deps.opts, ifMatchExplicit, acceptRemoteChanges, deps.httpClient, deps.apiURL,
+					)
+					*deps.result = out
+					return err
+				},
 			)
-			*deps.result = out
-			return err
 		},
 	}
 	cmd.Flags().BoolVar(&acceptRemoteChanges, "accept-remote-changes", false,
