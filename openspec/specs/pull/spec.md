@@ -54,3 +54,13 @@ plane request fails or returns before a body is read.
 
 - **WHEN** the configured API URL is unreachable
 - **THEN** pull exits 2 and no file is created at `--file`
+
+### Requirement: Dry-run pull fetches without writing
+
+`pull --dry-run` SHALL fetch the policy and report the would-be diff, and
+SHALL write neither `--file` nor the state file.
+
+#### Scenario: Nothing written
+
+- **WHEN** `pull --dry-run` succeeds
+- **THEN** `--file` and the state file are byte-identical to before

@@ -47,5 +47,5 @@
       and the stderr envelope in `README.md`, `docs/`, and `--help`
 - [x] 5.2 Record stripped linux/amd64 size with and without `-tags=ax_no_otlp,ax_no_grpc`
 - [x] 5.3 File the upstream ax-go issues (rshade/ax-go #331, #332, #333; comment on #128)
-- [ ] 5.4 `mise run test lint cross apidiff` passes; commit as `feat(tsacl)!:` with a `BREAKING CHANGE:` footer
-- [ ] 5.5 Archive this change after the PR merges
+- [x] 5.4 `mise run test lint cross apidiff` passes; commit with a `BREAKING CHANGE:` footer (merged as #62-#64)
+- [x] 5.5 Archive this change after the PR merges
