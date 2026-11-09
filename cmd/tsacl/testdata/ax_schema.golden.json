@@ -3733,6 +3733,140 @@
         "use": "lint"
       },
       {
+        "example": "  tsacl mcp-server\n  tsacl mcp-server --transport=http --addr=127.0.0.1:8080\n  tsacl mcp-server --transport=http --addr=0.0.0.0:8080 --allow-non-loopback",
+        "flags": [
+          {
+            "default": "127.0.0.1:8080",
+            "name": "addr",
+            "type": "string",
+            "usage": "HTTP bind address; loopback by default (used with --transport=http)"
+          },
+          {
+            "default": "false",
+            "name": "allow-non-loopback",
+            "type": "bool",
+            "usage": "allow the HTTP transport to bind a non-loopback address (fail-closed without it)"
+          },
+          {
+            "default": "false",
+            "name": "help",
+            "shorthand": "h",
+            "type": "bool",
+            "usage": "help for mcp-server"
+          },
+          {
+            "default": "stdio",
+            "name": "transport",
+            "type": "string",
+            "usage": "MCP transport: stdio or http"
+          },
+          {
+            "name": "api-key",
+            "type": "string",
+            "usage": "Tailscale API access token (default: TAILSCALE_API_KEY)"
+          },
+          {
+            "default": "auto",
+            "name": "color",
+            "type": "string",
+            "usage": "colorize human output: auto|always|never"
+          },
+          {
+            "default": "false",
+            "name": "dry-run",
+            "type": "bool",
+            "usage": "emit the envelope without side effects"
+          },
+          {
+            "default": "acl.json",
+            "name": "file",
+            "type": "string",
+            "usage": "policy file (typed edits preserve comments in JSON and HuJSON)"
+          },
+          {
+            "name": "format",
+            "type": "string",
+            "usage": "output format: human|json"
+          },
+          {
+            "name": "idempotency-key",
+            "type": "string",
+            "usage": "opaque key used to prevent duplicate-create retries"
+          },
+          {
+            "name": "if-match",
+            "type": "string",
+            "usage": "upload: explicit ETag overriding the policy-adjacent observed value"
+          },
+          {
+            "default": "warn",
+            "name": "indeterminate",
+            "type": "fail|warn|ignore",
+            "usage": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)"
+          },
+          {
+            "name": "oauth-client-id",
+            "type": "string",
+            "usage": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)"
+          },
+          {
+            "name": "oauth-client-secret",
+            "type": "string",
+            "usage": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)"
+          },
+          {
+            "name": "roster",
+            "type": "string",
+            "usage": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative"
+          },
+          {
+            "default": "off",
+            "name": "sanitize",
+            "type": "string",
+            "usage": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)"
+          },
+          {
+            "default": "false",
+            "name": "schema",
+            "type": "bool",
+            "usage": "print the machine-readable tool schema (JSON) and exit"
+          },
+          {
+            "default": "false",
+            "name": "strict",
+            "type": "bool",
+            "usage": "test/check: reject a policy containing an unparseable rule instead of warning"
+          },
+          {
+            "name": "tailnet",
+            "type": "string",
+            "usage": "tailnet name or ID (default: TAILSCALE_TAILNET)"
+          },
+          {
+            "default": "false",
+            "name": "verbose",
+            "type": "bool",
+            "usage": "log operational detail to stderr"
+          },
+          {
+            "default": "false",
+            "name": "version",
+            "type": "bool",
+            "usage": "print version and exit"
+          },
+          {
+            "default": "false",
+            "name": "yes",
+            "type": "bool",
+            "usage": "confirm a confirmation-gated operation"
+          }
+        ],
+        "long": "Expose this CLI's command tree as a live Model Context Protocol (MCP) server. Every visible, runnable command becomes a tool, except the reserved __schema, mcp-server, completion, and help commands and any command excluded with mcp.Exclude; tools/call runs the command in machine mode and returns its payload. Serves over stdio by default, or streamable HTTP (loopback unless --allow-non-loopback is set).",
+        "non_deterministic_fields": [],
+        "short": "Run this CLI as a live MCP server",
+        "use": "mcp-server"
+      },
+      {
         "flags": [
           {
             "name": "add",

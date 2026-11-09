@@ -38,7 +38,8 @@ and not every tool needs an indeterminate state.
 ## Discoverability
 
 Every binary provides rich command-line help, version information with build
-provenance, and a machine-readable `--schema` surface. Cobra-based tools also
+provenance, and a machine-readable `-schema` surface plus the ax-go `__schema`
+command. See the [agent runtime](agent-runtime.md) reference. Cobra-based tools also
 provide shell completion.
 
 Both single-dash long flags such as `-format` and conventional double-dash
