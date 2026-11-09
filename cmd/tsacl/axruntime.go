@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"strconv"
 	"strings"
+	"sync/atomic"
 
 	"github.com/rshade/ax-go"
 	"github.com/spf13/cobra"
@@ -192,4 +194,27 @@ func declareNonDeterministic(root *cobra.Command) {
 		}
 	}
 	walk(root)
+}
+
+// verdictContext carries a verdict's result envelope on the ax.Error. The MCP
+// server returns only the error for a non-zero exit, so a check that is "not
+// reachable" (1) or indeterminate (10), a failed test, or a lint finding would
+// otherwise lose its evidence. The policy text and diff are left out; they are
+// bulky and the caller already holds the file.
+func verdictContext(underMCP *atomic.Bool, res *result) []ax.ErrorOption {
+	if !underMCP.Load() || res == nil {
+		return nil
+	}
+	raw, err := json.Marshal(res)
+	if err != nil {
+		return nil
+	}
+	var fields map[string]any
+	if json.Unmarshal(raw, &fields) != nil {
+		return nil
+	}
+	for _, key := range []string{"policy", "diff", "meta"} {
+		delete(fields, key)
+	}
+	return []ax.ErrorOption{ax.WithErrorContext(fields)}
 }

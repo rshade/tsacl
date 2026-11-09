@@ -86,9 +86,14 @@ fi
 # jaxxstorm/vers (a tscli dependency) states Apache-2.0 in its README but ships
 # no LICENSE file, so go-licenses cannot classify it. Drop the --ignore once
 # upstream adds one.
+#
+# segmentio/asm (an ax-go MCP dependency, via the MCP SDK) is MIT No Attribution
+# (MIT-0), which is permissive but is not in the allowlist and which go-licenses
+# reports as Unknown. Drop the --ignore once go-licenses classifies MIT-0 or the
+# allowlist names it.
 [tasks.license-check]
 description = "Fail on a dependency outside the license allowlist"
-run = "go-licenses check ./... --ignore github.com/jaxxstorm/vers --allowed_licenses=MIT,Apache-2.0,BSD-2-Clause,BSD-3-Clause,ISC,MPL-2.0"
+run = "go-licenses check ./... --ignore github.com/jaxxstorm/vers --ignore github.com/segmentio/asm --allowed_licenses=MIT,Apache-2.0,BSD-2-Clause,BSD-3-Clause,ISC,MPL-2.0"
 
 [tasks.release-check]
 description = "Validate .goreleaser.yaml and build a snapshot"

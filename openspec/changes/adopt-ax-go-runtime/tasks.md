@@ -36,16 +36,16 @@
 
 - [x] 4.1 Confirm `__schema` and `__schema --as=mcp`; add goldens with `meta` and version masked
 - [x] 4.2 Regenerate `schema.golden.json` and the integration golden; review every hunk
-- [ ] 4.3 Mount `mcp.NewCommand`; `mcp.Exclude` the nine noun parents
-- [ ] 4.4 Refuse `test --watch` under MCP
-- [ ] 4.5 Carry verdict envelope fields via `ax.WithErrorContext` for exits 1 and 10
-- [ ] 4.6 In-process stdio session test: `tools/list` exclusions, `check`, `upload` refusal, `test --watch` refusal
+- [x] 4.3 Mount `mcp.NewCommand`; `mcp.Exclude` the nine noun parents
+- [x] 4.4 Refuse `test --watch` under MCP
+- [x] 4.5 Carry verdict envelope fields via `ax.WithErrorContext` for exits 1 and 10
+- [x] 4.6 In-process stdio session test: `tools/list` exclusions, `check`, `upload` refusal, `test --watch` refusal
 
 ## 5. Docs, measurement, delivery
 
-- [ ] 5.1 Document `__schema`, `mcp-server`, `--dry-run`, `--yes`, `AGENT_MODE`,
+- [x] 5.1 Document `__schema`, `mcp-server`, `--dry-run`, `--yes`, `AGENT_MODE`,
       and the stderr envelope in `README.md`, `docs/`, and `--help`
-- [ ] 5.2 Record stripped linux/amd64 size with and without `-tags=ax_no_otlp,ax_no_grpc`
-- [ ] 5.3 File the upstream ax-go issues (rshade/ax-go #331, #332, #333; comment on #128)
+- [x] 5.2 Record stripped linux/amd64 size with and without `-tags=ax_no_otlp,ax_no_grpc`
+- [x] 5.3 File the upstream ax-go issues (rshade/ax-go #331, #332, #333; comment on #128)
 - [ ] 5.4 `mise run test lint cross apidiff` passes; commit as `feat(tsacl)!:` with a `BREAKING CHANGE:` footer
 - [ ] 5.5 Archive this change after the PR merges

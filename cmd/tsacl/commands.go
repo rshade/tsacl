@@ -8,9 +8,11 @@ import (
 	"net/http"
 	"slices"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/rshade/ax-go"
+	"github.com/rshade/ax-go/mcp"
 	"github.com/spf13/cobra"
 
 	"github.com/rshade/tsacl/internal/aclpolicy"
@@ -31,6 +33,9 @@ type commandDeps struct {
 	verbose    *bool
 	sanitizer  **sanitize.Sanitizer
 	axLogger   ax.Logger
+	// underMCP is set when the mcp-server command is running, so commands that
+	// cannot work over a request/response protocol can refuse.
+	underMCP atomic.Bool
 }
 
 func (d *commandDeps) logger() *slog.Logger { return newLoggerOn(d.axLogger, *d.verbose, *d.sanitizer) }
@@ -110,7 +115,36 @@ func addSubcommands(root *cobra.Command, deps *commandDeps) {
 	)
 	wrapMutations(root, deps)
 	declareNonDeterministic(root)
+	mountMCP(root, deps)
 }
+
+const mcpInstructions = "Tailscale credentials and the tailnet are read from the server's environment " +
+	"(TAILSCALE_API_KEY or TAILSCALE_OAUTH_CLIENT_ID and TAILSCALE_OAUTH_CLIENT_SECRET, and TAILSCALE_TAILNET); " +
+	"do not pass them as tool arguments. upload requires yes=true, and dry-run previews any write."
+
+// mountMCP serves the command tree as MCP tools. The noun parents are only
+// groupings (they are runnable so a bare or mistyped one reports a usage error)
+// and would otherwise appear as tools; test is both a command and a parent, so
+// it stays.
+func mountMCP(root *cobra.Command, deps *commandDeps) {
+	mcp.Exclude(root)
+	for _, child := range root.Commands() {
+		if len(child.Commands()) > 0 && child.Name() != cmdTest {
+			mcp.Exclude(child)
+		}
+	}
+	server := mcp.NewCommand(root,
+		mcp.WithVersion(ax.ResolveVersion(version)),
+		mcp.WithInstructions(mcpInstructions),
+	)
+	serve := server.RunE
+	server.RunE = func(cmd *cobra.Command, args []string) error {
+		deps.underMCP.Store(true)
+		return serve(cmd, args)
+	}
+	root.AddCommand(server)
+}
+
 func newNodeAttrAddCommand(deps *commandDeps) *cobra.Command {
 	var flags nodeAttrFlags
 	cmd := &cobra.Command{
@@ -678,6 +712,9 @@ func newTestCommand(deps *commandDeps) *cobra.Command {
 			}
 			if interval <= 0 {
 				return usagef("--interval must be positive, got %s", interval)
+			}
+			if watch && deps.underMCP.Load() {
+				return usagef("--watch never returns and cannot run under mcp-server; call test without it")
 			}
 			out, err := runTest(
 				ctx,

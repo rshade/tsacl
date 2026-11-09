@@ -14,6 +14,7 @@ and flags; `tsacl --help` and `tsacl --schema` are authoritative.
 ## Reference
 
 - [Exit codes](reference/exit-codes.md)
+- [Agent runtime](reference/agent-runtime.md)
 - [AX conventions](reference/ax-conventions.md)
 - [Feature support](reference/feature-support.md)
 

@@ -650,7 +650,7 @@ func execute(
 		if commandErr == nil {
 			commandErr = err
 		}
-		return axErrorFor(cmd.Context(), err)
+		return axErrorFor(cmd.Context(), err, verdictContext(&deps.underMCP, sanitized)...)
 	}
 	root.SetFlagErrorFunc(func(cmd *cobra.Command, err error) error {
 		return finish(cmd, usageError{err})
@@ -3974,6 +3974,7 @@ func usage(w io.Writer, fs *pflag.FlagSet) {
 	fmt.Fprint(w, usageAuthenticationNote)
 	fmt.Fprint(w, usageSanitizationNote)
 	fmt.Fprint(w, usageUploadNote)
+	fmt.Fprint(w, usageAgentNote)
 	fmt.Fprint(w, usageExamples)
 	fmt.Fprint(w, usageExitCodes)
 }
@@ -4079,6 +4080,16 @@ const usageSanitizationNote = `
 // usageExitCodes is one block rather than a run of Fprintln calls so the help
 // text reads as the paragraph it is. Keep it ASCII: stdout stays parse-clean
 // across a Windows pipe boundary.
+const usageAgentNote = `
+Agents and automation:
+  AGENT_MODE=1 selects JSON output when -format is not given; a pipe alone does
+  not. Every failure writes one JSON error line to stderr (error_code, message,
+  retryable, trace_id) and exits with the code below. -dry-run previews any
+  write and leaves the policy and state files untouched. -format json upload
+  needs -yes. tsacl __schema [--as=mcp] describes the tool, and tsacl mcp-server
+  serves it over MCP; give it credentials through the environment, not flags.
+`
+
 const usageExitCodes = `
 Exit codes:
   0  success; check reports reachable. Server validation that returns warnings

@@ -125,6 +125,11 @@ tsacl --file acl/acl.generated.json upload     # apply, guarded by plan's ETag
 tsacl -schema                                   # machine-readable command/flag catalog
 tsacl --version                                 # version + VCS revision
 tsacl -format json --file acl.json grant add …  # JSON result envelope on stdout
+AGENT_MODE=1 tsacl --file acl.json lint         # JSON without -format
+tsacl -dry-run --file acl.json grant add …      # preview the diff; writes nothing
+tsacl -format json upload -yes                  # JSON-mode upload needs approval
+tsacl __schema --as=mcp                         # MCP tool list
+tsacl mcp-server                                # serve the commands over MCP (stdio)
 
 # Query without an external jq installation:
 tsacl --file acl.hujson jq '.grants[] | .src'
@@ -345,7 +350,9 @@ diffable against each other.
 `--roster PATH` (resolve role autogroups for `test`/`check`; see
 [Resolving role autogroups](#resolving-role-autogroups)),
 `--indeterminate fail|warn|ignore` (test exit policy, default `warn`),
-`-format human|json`, `--sanitize off|identity|strict`, `-verbose`, `--version`, `-schema`,
+`-format human|json` (unset by default; `AGENT_MODE` selects JSON),
+`--dry-run` (preview any write), `--yes` (approve a JSON-mode `upload`),
+`--idempotency-key`, `--sanitize off|identity|strict`, `-verbose`, `--version`, `-schema`,
 `--color auto|always|never` (colorize human output, default `auto`).
 `TAILSCALE_API_URL` overrides the API base URL (used by tests).
 
@@ -401,6 +408,10 @@ not an unguarded upload. Run `plan` or `pull` to create a fresh observation, or
 supply `--if-match ETAG` explicitly. Existing callers that already pass a
 non-empty `--if-match` do not depend on the state file for their precondition.
 
+In JSON mode `upload` also needs `--yes`; without it the command exits `2` with
+`error_code: "confirmation_required"` and sends nothing. `upload --dry-run`
+validates the candidate and checks the precondition without applying it.
+
 `upload --accept-remote-changes` is the explicit escape hatch. It sends no
 `If-Match`, reports the opt-out in human output and as
 `"accepted_remote_changes": true` in JSON, then records the resulting ETag.
@@ -411,6 +422,13 @@ and reconcile it through `tsacl merge --base ... --add ...`, the pair-merge
 path that preserves HuJSON comments. Do not use `tsacl merge --dir` for this
 reconciliation: the directory merge deliberately standardizes output to strict
 JSON and removes comments. Review the result and run `plan` again before retrying.
+
+### Agent runtime
+
+`tsacl` runs on the ax-go CLI runtime. Every failure writes one JSON error line
+to stderr, `--dry-run` previews writes, a JSON-mode `upload` needs `--yes`, and
+`__schema` and `mcp-server` expose the tool to agents. See the
+[agent runtime reference](docs/reference/agent-runtime.md).
 
 ### Exit codes
 
