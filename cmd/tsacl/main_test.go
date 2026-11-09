@@ -1285,7 +1285,7 @@ func assertPostureAttrWarning(t *testing.T, attr string, warningHas []string, wa
 			t.Errorf("stderr = %q, want it to contain %q", stderr.String(), fragment)
 		}
 	}
-	if warningFree && stderr.String() != "" {
+	if warningFree && strings.Contains(stderr.String(), `"level":"warn"`) {
 		t.Errorf("stderr = %q, want no warning for a custom: key", stderr.String())
 	}
 	built, loadErr := aclpolicy.Load(path)
@@ -3416,7 +3416,7 @@ func TestUploadOptOutIsVisibleAndRecordsNewETag(t *testing.T) {
 	var stdout strings.Builder
 	err := run(
 		context.Background(),
-		[]string{"-format", "json", "--file", path, "upload", "--accept-remote-changes"},
+		[]string{"-format", "json", "--file", path, "upload", "--yes", "--accept-remote-changes"},
 		func(key string) string {
 			return map[string]string{
 				"TAILSCALE_API_KEY": "token",

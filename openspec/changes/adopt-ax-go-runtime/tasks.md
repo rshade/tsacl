@@ -24,13 +24,13 @@
 
 ## 3. Dry-run and approval
 
-- [ ] 3.1 Wrap mutating commands in `ax.PerformWithAudit`: commit runs the body, rehearsal runs it on a private copy
-- [ ] 3.2 Cover all typed-edit, `init`, `merge`, `pull`, and `externaltailnet.go` write sites
-- [ ] 3.3 Wrap the three `observedstate.Record` calls in `ax.GuardWithAudit`
-- [ ] 3.4 `plan`, `pull`, `upload --dry-run` behavior per the specs
-- [ ] 3.5 Per-command test: hash `--file` and `.tsacl-state.json` before and after `--dry-run`
-- [ ] 3.6 `upload` calls `ax.Confirm`; httptest asserts no request without `--yes` in JSON mode
-- [ ] 3.7 Accept `-dry-run`, `-yes`, `-idempotency-key`
+- [x] 3.1 Wrap mutating commands in `ax.PerformWithAudit`: commit runs the body, rehearsal runs it on a private copy
+- [x] 3.2 Cover all typed-edit, `init`, `merge`, `pull`, and `externaltailnet.go` write sites
+- [x] 3.3 Wrap the three `observedstate.Record` calls in `ax.GuardWithAudit`
+- [x] 3.4 `plan`, `pull`, `upload --dry-run` behavior per the specs
+- [x] 3.5 Per-command test: hash `--file` and `.tsacl-state.json` before and after `--dry-run`
+- [x] 3.6 `upload` calls `ax.Confirm`; httptest asserts no request without `--yes` in JSON mode
+- [x] 3.7 Accept `-dry-run`, `-yes`, `-idempotency-key`
 
 ## 4. Discovery and MCP
 

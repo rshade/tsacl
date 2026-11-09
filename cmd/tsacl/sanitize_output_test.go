@@ -30,7 +30,7 @@ func TestSanitizedOutputTypesRequireExplicitFieldDecisions(t *testing.T) {
 	assertHandled("result", sanitize.UnhandledFields[result](
 		"SchemaVersion", "Tool", "Sanitization", "Command", "Status", "Message", "File",
 		"PolicyDigest", "Tailnet", "Authentication", "ETag", "AcceptedRemoteChanges", "Diff",
-		"Changed", "GrantIndex", "TestIndex", "AssertionIDs", "ACLIndex", "MergedFiles", "Meta", "Access",
+		"Changed", "GrantIndex", "TestIndex", "AssertionIDs", "ACLIndex", "MergedFiles", "DryRun", "Meta", "Access",
 		"Allowed", "Source", "Destination", "Port", "Protocol", "Evidence", "Trace", "Assertions",
 		"Skipped", "SSHTestsSkipped", "TestSummary", "Policy", "Findings", "LintSummary",
 		"LintThreshold", "LintSeverityExplicit", "Results", "Validation", "Local", "Server", "Agreement",

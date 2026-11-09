@@ -367,6 +367,9 @@ type result struct {
 	// an empty section as "external_tailnets": [] and lets every other command
 	// omit the field.
 	ExternalTailnets *[]aclpolicy.ExternalTailnetEntry `json:"external_tailnets,omitempty"`
+	// DryRun marks a rehearsal: nothing was written, and Diff holds the change
+	// a real run would have made.
+	DryRun bool `json:"dry_run,omitempty"`
 	// Meta carries the ax-go correlation metadata. It is the last field so the
 	// envelope without it is byte-identical to the pre-ax-go output, and it is
 	// emitted only in JSON mode.
@@ -2102,6 +2105,9 @@ const mergeSummary = "Merge ACL sources: compile directories (--dir) or merge on
 type mergeRequest struct {
 	file, base, add, out string
 	dirs                 []string
+	// write stores the merged document. A nil write is aclpolicy.WriteRaw;
+	// a rehearsal substitutes a capture so nothing reaches the disk.
+	write func(path string, data []byte) error
 }
 
 func runMerge(req mergeRequest) (*result, error) {
@@ -2114,8 +2120,12 @@ func runMerge(req mergeRequest) (*result, error) {
 	case !pair && len(req.dirs) == 0:
 		return nil, usagef("merge requires at least one --dir, or --base with --add")
 	}
+	write := req.write
+	if write == nil {
+		write = aclpolicy.WriteRaw
+	}
 	if pair {
-		return runMergePair(req.base, req.add, req.out)
+		return runMergePair(req.base, req.add, req.out, write)
 	}
 	path := req.out
 	if path == "" {
@@ -2125,7 +2135,7 @@ func runMerge(req mergeRequest) (*result, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err = aclpolicy.WriteRaw(path, data); err != nil {
+	if err = write(path, data); err != nil {
 		return nil, err
 	}
 	merged := len(paths)
@@ -2138,7 +2148,7 @@ func runMerge(req mergeRequest) (*result, error) {
 // runMergePair deep-merges one snippet into a base policy and, unlike the
 // directory path, keeps the HuJSON comments and layout of both inputs. It is
 // the reconciliation step after a stale-ETag upload refusal.
-func runMergePair(base, add, out string) (*result, error) {
+func runMergePair(base, add, out string, write func(string, []byte) error) (*result, error) {
 	if out == "" {
 		out = base
 	}
@@ -2146,7 +2156,7 @@ func runMergePair(base, add, out string) (*result, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err = aclpolicy.WriteRaw(out, data); err != nil {
+	if err = write(out, data); err != nil {
 		return nil, err
 	}
 	merged := 2
@@ -3423,7 +3433,7 @@ func runPlan(
 	if plan.Changed {
 		res.Diff = plan.Diff
 	}
-	if err = observedstate.Record(opts.file, opts.tailnet, plan.ETag); err != nil {
+	if err = recordObservedETag(ctx, opts.file, opts.tailnet, plan.ETag); err != nil {
 		return nil, usagef("recording plan ETag: %v", err)
 	}
 	return res, nil
@@ -3461,7 +3471,7 @@ func runPull(
 	if err = aclpolicy.WriteRaw(opts.file, policy.HuJSON); err != nil {
 		return nil, usagef("writing pulled policy to %s: %v", opts.file, err)
 	}
-	if err = observedstate.Record(opts.file, opts.tailnet, policy.ETag); err != nil {
+	if err = recordObservedETag(ctx, opts.file, opts.tailnet, policy.ETag); err != nil {
 		return nil, usagef("recording pulled ETag: %v", err)
 	}
 	message := fmt.Sprintf("pulled deployed policy for tailnet %s to %s", opts.tailnet, opts.file)
@@ -3484,26 +3494,15 @@ func runUpload(
 	httpClient *http.Client,
 	apiURL string,
 ) (*result, error) {
-	if ifMatchExplicit && acceptRemoteChanges {
-		return nil, usagef("--if-match and --accept-remote-changes are mutually exclusive")
-	}
-	if ifMatchExplicit && strings.TrimSpace(opts.ifMatch) == "" {
-		return nil, usagef("--if-match requires a non-empty ETag; use --accept-remote-changes to upload without one")
+	if err := checkUploadFlags(opts, ifMatchExplicit, acceptRemoteChanges); err != nil {
+		return nil, err
 	}
 	client, err := apiClient(opts, httpClient, apiURL, tailapi.ScopePolicyFile)
 	if err != nil {
 		return nil, err
 	}
-	if !ifMatchExplicit && !acceptRemoteChanges {
-		observedETag, stateErr := observedstate.Read(opts.file, opts.tailnet)
-		if stateErr != nil {
-			return nil, usagef(
-				"refusing to upload without a recorded ETag for tailnet %s: %v; "+
-					"run plan or pull to observe the deployed policy, supply --if-match, or explicitly opt out with --accept-remote-changes",
-				opts.tailnet, stateErr,
-			)
-		}
-		opts.ifMatch = observedETag
+	if opts.ifMatch, err = resolveUploadETag(opts, ifMatchExplicit, acceptRemoteChanges); err != nil {
+		return nil, err
 	}
 	uploaded, err := tailapi.UploadFile(ctx, client, opts.file, opts.ifMatch)
 	err = tailapi.WrapOAuthError(err, tailapi.ScopePolicyFile, opts.oauthClientID, opts.oauthClientSecret)
@@ -3536,7 +3535,7 @@ func runUpload(
 			newETag = observed.ETag
 		}
 	}
-	if err = observedstate.Record(opts.file, opts.tailnet, newETag); err != nil {
+	if err = recordObservedETag(ctx, opts.file, opts.tailnet, newETag); err != nil {
 		return nil, fmt.Errorf(
 			"upload succeeded but its new ETag could not be recorded: %w; run plan before uploading again",
 			err,
@@ -3553,6 +3552,42 @@ func runUpload(
 	res.ETag = newETag
 	res.AcceptedRemoteChanges = acceptRemoteChanges
 	return res, nil
+}
+
+func checkUploadFlags(opts options, ifMatchExplicit, acceptRemoteChanges bool) error {
+	if ifMatchExplicit && acceptRemoteChanges {
+		return usagef("--if-match and --accept-remote-changes are mutually exclusive")
+	}
+	if ifMatchExplicit && strings.TrimSpace(opts.ifMatch) == "" {
+		return usagef("--if-match requires a non-empty ETag; use --accept-remote-changes to upload without one")
+	}
+	return nil
+}
+
+// resolveUploadETag returns the If-Match value an upload will send: the
+// explicit one, none when remote changes are accepted, otherwise the ETag the
+// last plan or pull recorded.
+func resolveUploadETag(opts options, ifMatchExplicit, acceptRemoteChanges bool) (string, error) {
+	if ifMatchExplicit || acceptRemoteChanges {
+		return opts.ifMatch, nil
+	}
+	observedETag, err := observedstate.Read(opts.file, opts.tailnet)
+	if err != nil {
+		return "", usagef(
+			"refusing to upload without a recorded ETag for tailnet %s: %v; "+
+				"run plan or pull to observe the deployed policy, supply --if-match, or explicitly opt out with --accept-remote-changes",
+			opts.tailnet, err,
+		)
+	}
+	return observedETag, nil
+}
+
+// recordObservedETag persists the observed ETag unless dry-run is active. The
+// audit lines are suppressed: the surrounding command already audits its write.
+func recordObservedETag(ctx context.Context, file, tailnet, etag string) error {
+	_, err := ax.GuardWithAudit(ax.WithAudit(ctx, false), "record observed ETag",
+		func(context.Context) error { return observedstate.Record(file, tailnet, etag) })
+	return err
 }
 
 func isPreconditionFailed(err error) bool {

@@ -67,7 +67,10 @@ func TestTSACLPlanValidateApplyRestoreWorkflow(t *testing.T) {
 	}
 
 	originalETag := policyETag(originalPolicy)
-	pullJSON := runner.mustSucceed(t, "-format", "json", "--file", originalPath, "pull")
+	pullJSON, _, pullErr := runner.runSplit(t, "-format", "json", "--file", originalPath, "pull")
+	if pullErr != nil {
+		t.Fatalf("pull failed: %v", pullErr)
+	}
 	var pulled struct {
 		File    string `json:"file"`
 		Tailnet string `json:"tailnet"`
