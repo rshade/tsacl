@@ -43,6 +43,7 @@ func sanitizeResultEnvelope(input *result, output *sanitize.Sanitizer) *result {
 		AssertionIDs:          slices.Clone(input.AssertionIDs),
 		ACLIndex:              clonePointer(input.ACLIndex),
 		MergedFiles:           clonePointer(input.MergedFiles),
+		Meta:                  clonePointer(input.Meta),
 		Access:                input.Access,
 		Allowed:               clonePointer(input.Allowed),
 		Source:                sanitizeSelector(input.Source, output),

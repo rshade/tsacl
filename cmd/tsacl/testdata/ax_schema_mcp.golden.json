@@ -1,0 +1,4894 @@
+{
+  "tools": [
+    {
+      "description": "Compile, validate, plan, and upload the tailnet ACL policy.",
+      "inputSchema": {
+        "properties": {
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for tsacl",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl",
+      "nonDeterministicFields": []
+    },
+    {
+      "description": "Manage route and exit-node auto-approvers",
+      "inputSchema": {
+        "properties": {
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for auto-approver",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl-auto-approver",
+      "nonDeterministicFields": [
+        "data.meta.idempotency_key",
+        "data.meta.span_id",
+        "data.meta.trace_id",
+        "meta.idempotency_key",
+        "meta.span_id",
+        "meta.trace_id"
+      ]
+    },
+    {
+      "description": "Add auto-approvers for a route or the exit-node list",
+      "inputSchema": {
+        "properties": {
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "approver": {
+            "description": "approver selector (user, group, tag, or autogroup); may be repeated",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "comment": {
+            "description": "attach TEXT to the authored entry as a leading // comment",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "exit-node": {
+            "default": false,
+            "description": "edit the exit-node approver list instead (autoApprovers.exitNode)",
+            "type": "boolean"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for add",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "overwrite-comment": {
+            "default": false,
+            "description": "replace the entry's existing comments instead of appending to them",
+            "type": "boolean"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "route": {
+            "description": "CIDR whose approver list to edit (autoApprovers.routes)",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl-auto-approver-add",
+      "nonDeterministicFields": [
+        "data.meta.idempotency_key",
+        "data.meta.span_id",
+        "data.meta.trace_id",
+        "meta.idempotency_key",
+        "meta.span_id",
+        "meta.trace_id"
+      ]
+    },
+    {
+      "description": "Remove auto-approvers, pruning an emptied route key",
+      "inputSchema": {
+        "properties": {
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "approver": {
+            "description": "approver selector (user, group, tag, or autogroup); may be repeated",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "exit-node": {
+            "default": false,
+            "description": "edit the exit-node approver list instead (autoApprovers.exitNode)",
+            "type": "boolean"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for remove",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "route": {
+            "description": "CIDR whose approver list to edit (autoApprovers.routes)",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl-auto-approver-remove",
+      "nonDeterministicFields": [
+        "data.meta.idempotency_key",
+        "data.meta.span_id",
+        "data.meta.trace_id",
+        "meta.idempotency_key",
+        "meta.span_id",
+        "meta.trace_id"
+      ]
+    },
+    {
+      "description": "Answer one reachability question locally",
+      "inputSchema": {
+        "properties": {
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "dst": {
+            "description": "destination selector, optionally with :port",
+            "type": "string"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for check",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "port": {
+            "default": -1,
+            "description": "destination port (alternative to including it in --dst)",
+            "type": "integer"
+          },
+          "posture-attr": {
+            "description": "posture attribute KEY=VALUE; may be repeated. Values are typed: true/false are booleans, JSON numbers are numbers, 'quoted' and \"quoted\" are strings, anything else is a bare string",
+            "type": "string"
+          },
+          "posture-attrs-complete": {
+            "default": false,
+            "description": "assert the --posture-attr set is complete: attributes it omits are unset",
+            "type": "boolean"
+          },
+          "proto": {
+            "default": "any",
+            "description": "IP protocol to ask about: tcp|udp|sctp|any",
+            "type": "string"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "src": {
+            "description": "source user, group, tag, host, IP, or CIDR",
+            "type": "string"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl-check",
+      "nonDeterministicFields": [
+        "data.meta.idempotency_key",
+        "data.meta.span_id",
+        "data.meta.trace_id",
+        "meta.idempotency_key",
+        "meta.span_id",
+        "meta.trace_id"
+      ]
+    },
+    {
+      "description": "Manage externalTailnets aliases",
+      "inputSchema": {
+        "properties": {
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for external-tailnet",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl-external-tailnet",
+      "nonDeterministicFields": [
+        "data.meta.idempotency_key",
+        "data.meta.span_id",
+        "data.meta.trace_id",
+        "meta.idempotency_key",
+        "meta.span_id",
+        "meta.trace_id"
+      ]
+    },
+    {
+      "description": "Add an externalTailnets alias; repeating the same arguments is a no-op",
+      "inputSchema": {
+        "properties": {
+          "allow-external-references-to": {
+            "default": [],
+            "description": "local group: or tag: selector the other tailnet may reference; may be repeated",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "allow-incoming": {
+            "default": false,
+            "description": "set allowIncomingConnections on the alias",
+            "type": "boolean"
+          },
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "comment": {
+            "description": "attach TEXT to the authored entry as a leading // comment",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "external-id": {
+            "description": "external tailnet ID",
+            "type": "string"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for add",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "overwrite-comment": {
+            "default": false,
+            "description": "replace the entry's existing comments instead of appending to them",
+            "type": "boolean"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl-external-tailnet-add",
+      "nonDeterministicFields": [
+        "data.meta.idempotency_key",
+        "data.meta.span_id",
+        "data.meta.trace_id",
+        "meta.idempotency_key",
+        "meta.span_id",
+        "meta.trace_id"
+      ]
+    },
+    {
+      "description": "List externalTailnets aliases",
+      "inputSchema": {
+        "properties": {
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for list",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl-external-tailnet-list",
+      "nonDeterministicFields": [
+        "data.meta.idempotency_key",
+        "data.meta.span_id",
+        "data.meta.trace_id",
+        "meta.idempotency_key",
+        "meta.span_id",
+        "meta.trace_id"
+      ]
+    },
+    {
+      "description": "Remove an externalTailnets alias; a referenced alias requires --force",
+      "inputSchema": {
+        "properties": {
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "force": {
+            "default": false,
+            "description": "remove the alias even when a selector still names it",
+            "type": "boolean"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for remove",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl-external-tailnet-remove",
+      "nonDeterministicFields": [
+        "data.meta.idempotency_key",
+        "data.meta.span_id",
+        "data.meta.trace_id",
+        "meta.idempotency_key",
+        "meta.span_id",
+        "meta.trace_id"
+      ]
+    },
+    {
+      "description": "Manage grants",
+      "inputSchema": {
+        "properties": {
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for grant",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl-grant",
+      "nonDeterministicFields": [
+        "data.meta.idempotency_key",
+        "data.meta.span_id",
+        "data.meta.trace_id",
+        "meta.idempotency_key",
+        "meta.span_id",
+        "meta.trace_id"
+      ]
+    },
+    {
+      "description": "Append a grant to the policy",
+      "inputSchema": {
+        "properties": {
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "comment": {
+            "description": "attach TEXT to the authored entry as a leading // comment",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "dst": {
+            "description": "grant destination; may be repeated",
+            "type": "string"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for add",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "ip": {
+            "description": "IP protocol and port expression; may be repeated",
+            "type": "string"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "overwrite-comment": {
+            "default": false,
+            "description": "replace the entry's existing comments instead of appending to them",
+            "type": "boolean"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "src": {
+            "description": "grant source; may be repeated",
+            "type": "string"
+          },
+          "src-posture": {
+            "description": "required device posture (posture:NAME); may be repeated",
+            "type": "string"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl-grant-add",
+      "nonDeterministicFields": [
+        "data.meta.idempotency_key",
+        "data.meta.span_id",
+        "data.meta.trace_id",
+        "meta.idempotency_key",
+        "meta.span_id",
+        "meta.trace_id"
+      ]
+    },
+    {
+      "description": "Remove a grant by index",
+      "inputSchema": {
+        "properties": {
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for remove",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "index": {
+            "default": -1,
+            "description": "index of the grant to remove",
+            "type": "integer"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl-grant-remove",
+      "nonDeterministicFields": [
+        "data.meta.idempotency_key",
+        "data.meta.span_id",
+        "data.meta.trace_id",
+        "meta.idempotency_key",
+        "meta.span_id",
+        "meta.trace_id"
+      ]
+    },
+    {
+      "description": "Manage group definitions",
+      "inputSchema": {
+        "properties": {
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for group",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl-group",
+      "nonDeterministicFields": [
+        "data.meta.idempotency_key",
+        "data.meta.span_id",
+        "data.meta.trace_id",
+        "meta.idempotency_key",
+        "meta.span_id",
+        "meta.trace_id"
+      ]
+    },
+    {
+      "description": "Add members to a group definition",
+      "inputSchema": {
+        "properties": {
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "comment": {
+            "description": "attach TEXT to the authored entry as a leading // comment",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for add",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "member": {
+            "description": "group login or autogroup; may be repeated",
+            "type": "string"
+          },
+          "name": {
+            "description": "group definition name (group:NAME)",
+            "type": "string"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "overwrite-comment": {
+            "default": false,
+            "description": "replace the entry's existing comments instead of appending to them",
+            "type": "boolean"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl-group-add",
+      "nonDeterministicFields": [
+        "data.meta.idempotency_key",
+        "data.meta.span_id",
+        "data.meta.trace_id",
+        "meta.idempotency_key",
+        "meta.span_id",
+        "meta.trace_id"
+      ]
+    },
+    {
+      "description": "Remove a group definition",
+      "inputSchema": {
+        "properties": {
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "force": {
+            "default": false,
+            "description": "remove even when policy rules still reference the definition",
+            "type": "boolean"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for remove",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "name": {
+            "description": "group definition name (group:NAME)",
+            "type": "string"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl-group-remove",
+      "nonDeterministicFields": [
+        "data.meta.idempotency_key",
+        "data.meta.span_id",
+        "data.meta.trace_id",
+        "meta.idempotency_key",
+        "meta.span_id",
+        "meta.trace_id"
+      ]
+    },
+    {
+      "description": "Manage host aliases",
+      "inputSchema": {
+        "properties": {
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for host",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl-host",
+      "nonDeterministicFields": [
+        "data.meta.idempotency_key",
+        "data.meta.span_id",
+        "data.meta.trace_id",
+        "meta.idempotency_key",
+        "meta.span_id",
+        "meta.trace_id"
+      ]
+    },
+    {
+      "description": "Set a host alias to an address",
+      "inputSchema": {
+        "properties": {
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "comment": {
+            "description": "attach TEXT to the authored entry as a leading // comment",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for set",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "overwrite-comment": {
+            "default": false,
+            "description": "replace the entry's existing comments instead of appending to them",
+            "type": "boolean"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl-host-set",
+      "nonDeterministicFields": [
+        "data.meta.idempotency_key",
+        "data.meta.span_id",
+        "data.meta.trace_id",
+        "meta.idempotency_key",
+        "meta.span_id",
+        "meta.trace_id"
+      ]
+    },
+    {
+      "description": "Initialize an empty policy for typed authoring",
+      "inputSchema": {
+        "properties": {
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for init",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl-init",
+      "nonDeterministicFields": [
+        "data.meta.idempotency_key",
+        "data.meta.span_id",
+        "data.meta.trace_id",
+        "meta.idempotency_key",
+        "meta.span_id",
+        "meta.trace_id"
+      ]
+    },
+    {
+      "description": "Manage ipset definitions",
+      "inputSchema": {
+        "properties": {
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for ipset",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl-ipset",
+      "nonDeterministicFields": [
+        "data.meta.idempotency_key",
+        "data.meta.span_id",
+        "data.meta.trace_id",
+        "meta.idempotency_key",
+        "meta.span_id",
+        "meta.trace_id"
+      ]
+    },
+    {
+      "description": "Add members to an ipset definition",
+      "inputSchema": {
+        "properties": {
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "cidr": {
+            "description": "CIDR prefix; a --member restricted to that form; may be repeated",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "comment": {
+            "description": "attach TEXT to the authored entry as a leading // comment",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for add",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "member": {
+            "description": "CIDR, address, range A-B, host:ALIAS, ipset:NAME, or add|remove MEMBER; may be repeated",
+            "type": "string"
+          },
+          "name": {
+            "description": "ipset definition name (ipset:NAME)",
+            "type": "string"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "overwrite-comment": {
+            "default": false,
+            "description": "replace the entry's existing comments instead of appending to them",
+            "type": "boolean"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl-ipset-add",
+      "nonDeterministicFields": [
+        "data.meta.idempotency_key",
+        "data.meta.span_id",
+        "data.meta.trace_id",
+        "meta.idempotency_key",
+        "meta.span_id",
+        "meta.trace_id"
+      ]
+    },
+    {
+      "description": "Remove a ipset definition",
+      "inputSchema": {
+        "properties": {
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "force": {
+            "default": false,
+            "description": "remove even when policy rules still reference the definition",
+            "type": "boolean"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for remove",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "name": {
+            "description": "ipset definition name (ipset:NAME)",
+            "type": "string"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl-ipset-remove",
+      "nonDeterministicFields": [
+        "data.meta.idempotency_key",
+        "data.meta.span_id",
+        "data.meta.trace_id",
+        "meta.idempotency_key",
+        "meta.span_id",
+        "meta.trace_id"
+      ]
+    },
+    {
+      "description": "Query the policy with the embedded jq engine",
+      "inputSchema": {
+        "properties": {
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for jq",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl-jq",
+      "nonDeterministicFields": [
+        "data.meta.idempotency_key",
+        "data.meta.span_id",
+        "data.meta.trace_id",
+        "meta.idempotency_key",
+        "meta.span_id",
+        "meta.trace_id"
+      ]
+    },
+    {
+      "description": "Statically lint policy hygiene and broad-rule test coverage (-config currently supports broad-rule-untested allowBroad exclusions)",
+      "inputSchema": {
+        "properties": {
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "config": {
+            "description": "HuJSON lint config path (currently broad-rule-untested allowBroad exclusions)",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for lint",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "online-validation": {
+            "default": false,
+            "description": "check svc: destinations and SCIM group sync against the control plane, read-only (looks up each service, then submits the policy to /acl/validate); requires --tailnet and API-key or OAuth credentials",
+            "type": "boolean"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "scim-domains": {
+            "description": "narrow the SCIM-group exemption to these @domains and their subdomains (comma-separated; may be repeated)",
+            "type": "string"
+          },
+          "severity": {
+            "default": "warn",
+            "description": "lowest finding severity to report and fail on when set: advice|info|warn|error; when omitted, report all and fail on warn or error",
+            "type": "string"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "strict-scim-groups": {
+            "default": false,
+            "description": "error on undeclared SCIM/IdP-synced groups (group:\u003cname\u003e@\u003cdomain\u003e) instead of exempting them",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "wildcard": {
+            "default": "any-to-any",
+            "description": "over-broad wildcard policy: any-to-any|any|off",
+            "type": "string"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl-lint",
+      "nonDeterministicFields": [
+        "data.meta.idempotency_key",
+        "data.meta.span_id",
+        "data.meta.trace_id",
+        "meta.idempotency_key",
+        "meta.span_id",
+        "meta.trace_id"
+      ]
+    },
+    {
+      "description": "Merge ACL sources: compile directories (--dir) or merge one snippet into a base (--base, --add)",
+      "inputSchema": {
+        "properties": {
+          "add": {
+            "description": "snippet to deep-merge into --base; requires --base",
+            "type": "string"
+          },
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "base": {
+            "description": "base policy for a comment-preserving pair merge; requires --add",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "dir": {
+            "description": "directory containing ACL files; may be repeated",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for merge",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "out": {
+            "description": "output file; defaults to --file with --dir and to --base with --base/--add",
+            "type": "string"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl-merge",
+      "nonDeterministicFields": [
+        "data.meta.idempotency_key",
+        "data.meta.span_id",
+        "data.meta.trace_id",
+        "meta.idempotency_key",
+        "meta.span_id",
+        "meta.trace_id"
+      ]
+    },
+    {
+      "description": "Manage node attributes",
+      "inputSchema": {
+        "properties": {
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for nodeattr",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl-nodeattr",
+      "nonDeterministicFields": [
+        "data.meta.idempotency_key",
+        "data.meta.span_id",
+        "data.meta.trace_id",
+        "meta.idempotency_key",
+        "meta.span_id",
+        "meta.trace_id"
+      ]
+    },
+    {
+      "description": "Add attributes or IP pools to a target set; target order is ignored and matching entries are merged",
+      "inputSchema": {
+        "properties": {
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "attr": {
+            "description": "node attribute name; may be repeated",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "comment": {
+            "description": "attach TEXT to the authored entry as a leading // comment",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for add",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "ip-pool": {
+            "description": "IP pool CIDR; may be repeated",
+            "type": "string"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "overwrite-comment": {
+            "default": false,
+            "description": "replace the entry's existing comments instead of appending to them",
+            "type": "boolean"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "target": {
+            "description": "target selector; may be repeated",
+            "type": "string"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl-nodeattr-add",
+      "nonDeterministicFields": [
+        "data.meta.idempotency_key",
+        "data.meta.span_id",
+        "data.meta.trace_id",
+        "meta.idempotency_key",
+        "meta.span_id",
+        "meta.trace_id"
+      ]
+    },
+    {
+      "description": "Remove node attributes or IP pools by target set, or one entry by --index",
+      "inputSchema": {
+        "properties": {
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "attr": {
+            "description": "node attribute name; may be repeated",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for remove",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "index": {
+            "default": -1,
+            "description": "remove the nodeAttrs entry at this zero-based index",
+            "type": "integer"
+          },
+          "ip-pool": {
+            "description": "IP pool CIDR; may be repeated",
+            "type": "string"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "target": {
+            "description": "target selector; may be repeated",
+            "type": "string"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl-nodeattr-remove",
+      "nonDeterministicFields": [
+        "data.meta.idempotency_key",
+        "data.meta.span_id",
+        "data.meta.trace_id",
+        "meta.idempotency_key",
+        "meta.span_id",
+        "meta.trace_id"
+      ]
+    },
+    {
+      "description": "Emit the policy as standard JSON for general-purpose JSON tools",
+      "inputSchema": {
+        "properties": {
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for normalize",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl-normalize",
+      "nonDeterministicFields": [
+        "data.meta.idempotency_key",
+        "data.meta.span_id",
+        "data.meta.trace_id",
+        "meta.idempotency_key",
+        "meta.span_id",
+        "meta.trace_id"
+      ]
+    },
+    {
+      "description": "Diff the policy against the live tailnet (read-only)",
+      "inputSchema": {
+        "properties": {
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for plan",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl-plan",
+      "nonDeterministicFields": [
+        "data.meta.idempotency_key",
+        "data.meta.span_id",
+        "data.meta.trace_id",
+        "meta.idempotency_key",
+        "meta.span_id",
+        "meta.trace_id"
+      ]
+    },
+    {
+      "description": "Manage posture definitions",
+      "inputSchema": {
+        "properties": {
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for posture",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl-posture",
+      "nonDeterministicFields": [
+        "data.meta.idempotency_key",
+        "data.meta.span_id",
+        "data.meta.trace_id",
+        "meta.idempotency_key",
+        "meta.span_id",
+        "meta.trace_id"
+      ]
+    },
+    {
+      "description": "Remove a posture definition",
+      "inputSchema": {
+        "properties": {
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for remove",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl-posture-remove",
+      "nonDeterministicFields": [
+        "data.meta.idempotency_key",
+        "data.meta.span_id",
+        "data.meta.trace_id",
+        "meta.idempotency_key",
+        "meta.span_id",
+        "meta.trace_id"
+      ]
+    },
+    {
+      "description": "Add or replace a posture's expression list",
+      "inputSchema": {
+        "properties": {
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "comment": {
+            "description": "attach TEXT to the authored entry as a leading // comment",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for set",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "overwrite-comment": {
+            "default": false,
+            "description": "replace the entry's existing comments instead of appending to them",
+            "type": "boolean"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl-posture-set",
+      "nonDeterministicFields": [
+        "data.meta.idempotency_key",
+        "data.meta.span_id",
+        "data.meta.trace_id",
+        "meta.idempotency_key",
+        "meta.span_id",
+        "meta.trace_id"
+      ]
+    },
+    {
+      "description": "Bootstrap a local policy from the live tailnet",
+      "inputSchema": {
+        "properties": {
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "force": {
+            "default": false,
+            "description": "replace an existing --file (use only for an intentional refresh)",
+            "type": "boolean"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for pull",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl-pull",
+      "nonDeterministicFields": [
+        "data.meta.idempotency_key",
+        "data.meta.span_id",
+        "data.meta.trace_id",
+        "meta.idempotency_key",
+        "meta.span_id",
+        "meta.trace_id"
+      ]
+    },
+    {
+      "description": "Manage SSH rules",
+      "inputSchema": {
+        "properties": {
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for ssh",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl-ssh",
+      "nonDeterministicFields": [
+        "data.meta.idempotency_key",
+        "data.meta.span_id",
+        "data.meta.trace_id",
+        "meta.idempotency_key",
+        "meta.span_id",
+        "meta.trace_id"
+      ]
+    },
+    {
+      "description": "Add an SSH rule; selector order is ignored, duplicate rules are a no-op, and check without a period differs from check with one",
+      "inputSchema": {
+        "properties": {
+          "action": {
+            "description": "SSH action: accept or check",
+            "type": "string"
+          },
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "check-period": {
+            "description": "for action check, re-authorize after a positive DURATION or always; omitted means no period and differs from an explicit period",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "comment": {
+            "description": "attach TEXT to the authored entry as a leading // comment",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "dst": {
+            "description": "destination node selector; may be repeated",
+            "type": "string"
+          },
+          "enforce-recorder": {
+            "default": false,
+            "description": "require the recorder for this rule",
+            "type": "boolean"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for add",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "overwrite-comment": {
+            "default": false,
+            "description": "replace the entry's existing comments instead of appending to them",
+            "type": "boolean"
+          },
+          "recorder": {
+            "description": "recorder node selector; may be repeated",
+            "type": "string"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "src": {
+            "description": "source selector; may be repeated",
+            "type": "string"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "user": {
+            "description": "SSH login name or autogroup; may be repeated",
+            "type": "string"
+          },
+          "users": {
+            "description": "alias for --user; may be repeated",
+            "type": "string"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl-ssh-add",
+      "nonDeterministicFields": [
+        "data.meta.idempotency_key",
+        "data.meta.span_id",
+        "data.meta.trace_id",
+        "meta.idempotency_key",
+        "meta.span_id",
+        "meta.trace_id"
+      ]
+    },
+    {
+      "description": "Remove an SSH rule by semantic identity or --index",
+      "inputSchema": {
+        "properties": {
+          "action": {
+            "description": "SSH action: accept or check",
+            "type": "string"
+          },
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "check-period": {
+            "description": "for action check, re-authorize after a positive DURATION or always; omitted means no period and differs from an explicit period",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "dst": {
+            "description": "destination node selector; may be repeated",
+            "type": "string"
+          },
+          "enforce-recorder": {
+            "default": false,
+            "description": "require the recorder for this rule",
+            "type": "boolean"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for remove",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "index": {
+            "default": -1,
+            "description": "remove the SSH rule at this zero-based index",
+            "type": "integer"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "recorder": {
+            "description": "recorder node selector; may be repeated",
+            "type": "string"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "src": {
+            "description": "source selector; may be repeated",
+            "type": "string"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "user": {
+            "description": "SSH login name or autogroup; may be repeated",
+            "type": "string"
+          },
+          "users": {
+            "description": "alias for --user; may be repeated",
+            "type": "string"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl-ssh-remove",
+      "nonDeterministicFields": [
+        "data.meta.idempotency_key",
+        "data.meta.span_id",
+        "data.meta.trace_id",
+        "meta.idempotency_key",
+        "meta.span_id",
+        "meta.trace_id"
+      ]
+    },
+    {
+      "description": "Manage tag owners",
+      "inputSchema": {
+        "properties": {
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for tag-owner",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl-tag-owner",
+      "nonDeterministicFields": [
+        "data.meta.idempotency_key",
+        "data.meta.span_id",
+        "data.meta.trace_id",
+        "meta.idempotency_key",
+        "meta.span_id",
+        "meta.trace_id"
+      ]
+    },
+    {
+      "description": "Add an owner to a tag",
+      "inputSchema": {
+        "properties": {
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "comment": {
+            "description": "attach TEXT to the authored entry as a leading // comment",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for add",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "overwrite-comment": {
+            "default": false,
+            "description": "replace the entry's existing comments instead of appending to them",
+            "type": "boolean"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl-tag-owner-add",
+      "nonDeterministicFields": [
+        "data.meta.idempotency_key",
+        "data.meta.span_id",
+        "data.meta.trace_id",
+        "meta.idempotency_key",
+        "meta.span_id",
+        "meta.trace_id"
+      ]
+    },
+    {
+      "description": "Run network tests locally; sshTests are preserved but not evaluated (-strict rejects unparseable rules; --indeterminate controls only test's exit; --watch re-runs on change and never exits non-zero for a verdict; --watch --validate adds explicit credentialed, read-only authoritative server validation)",
+      "inputSchema": {
+        "properties": {
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for test",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "interval": {
+            "default": "500ms",
+            "description": "polling interval for --watch",
+            "type": "string"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "validate": {
+            "default": false,
+            "description": "with --watch, validate each stable snapshot using the read-only Tailscale API",
+            "type": "boolean"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "watch": {
+            "default": false,
+            "description": "re-run the assertions whenever the policy file changes; never exits non-zero for a verdict",
+            "type": "boolean"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl-test",
+      "nonDeterministicFields": [
+        "data.meta.idempotency_key",
+        "data.meta.span_id",
+        "data.meta.trace_id",
+        "meta.idempotency_key",
+        "meta.span_id",
+        "meta.trace_id"
+      ]
+    },
+    {
+      "description": "Add deny or accept policy test assertions without evaluating them",
+      "inputSchema": {
+        "properties": {
+          "accept": {
+            "description": "accepted destination in DST:PORT form; may be repeated",
+            "type": "string"
+          },
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "deny": {
+            "description": "denied destination in DST:PORT form; may be repeated",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for add",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "src": {
+            "description": "assertion source",
+            "type": "string"
+          },
+          "src-posture-attr": {
+            "description": "posture attribute KEY=VALUE for the test entry; may be repeated. Typed like check's --posture-attr",
+            "type": "string"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl-test-add",
+      "nonDeterministicFields": [
+        "data.meta.idempotency_key",
+        "data.meta.span_id",
+        "data.meta.trace_id",
+        "meta.idempotency_key",
+        "meta.span_id",
+        "meta.trace_id"
+      ]
+    },
+    {
+      "description": "Remove deny or accept policy test assertions; may renumber later assertion IDs",
+      "inputSchema": {
+        "properties": {
+          "accept": {
+            "description": "accepted destination in DST:PORT form; may be repeated",
+            "type": "string"
+          },
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "deny": {
+            "description": "denied destination in DST:PORT form; may be repeated",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for remove",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "src": {
+            "description": "assertion source",
+            "type": "string"
+          },
+          "src-posture-attr": {
+            "description": "target only the entry whose srcPostureAttrs matches exactly; may be repeated",
+            "type": "string"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl-test-remove",
+      "nonDeterministicFields": [
+        "data.meta.idempotency_key",
+        "data.meta.span_id",
+        "data.meta.trace_id",
+        "meta.idempotency_key",
+        "meta.span_id",
+        "meta.trace_id"
+      ]
+    },
+    {
+      "description": "Upload the policy to the tailnet",
+      "inputSchema": {
+        "properties": {
+          "accept-remote-changes": {
+            "default": false,
+            "description": "upload without If-Match, explicitly accepting remote changes not present in --file",
+            "type": "boolean"
+          },
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for upload",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl-upload",
+      "nonDeterministicFields": [
+        "data.meta.idempotency_key",
+        "data.meta.span_id",
+        "data.meta.trace_id",
+        "meta.idempotency_key",
+        "meta.span_id",
+        "meta.trace_id"
+      ]
+    },
+    {
+      "description": "Validate the policy via the Tailscale API",
+      "inputSchema": {
+        "properties": {
+          "api-key": {
+            "description": "Tailscale API access token (default: TAILSCALE_API_KEY)",
+            "type": "string"
+          },
+          "color": {
+            "default": "auto",
+            "description": "colorize human output: auto|always|never",
+            "type": "string"
+          },
+          "dry-run": {
+            "default": false,
+            "description": "emit the envelope without side effects",
+            "type": "boolean"
+          },
+          "file": {
+            "default": "acl.json",
+            "description": "policy file (typed edits preserve comments in JSON and HuJSON)",
+            "type": "string"
+          },
+          "format": {
+            "description": "output format: human|json",
+            "type": "string"
+          },
+          "help": {
+            "default": false,
+            "description": "help for validate",
+            "type": "boolean"
+          },
+          "idempotency-key": {
+            "description": "opaque key used to prevent duplicate-create retries",
+            "type": "string"
+          },
+          "if-match": {
+            "description": "upload: explicit ETag overriding the policy-adjacent observed value",
+            "type": "string"
+          },
+          "indeterminate": {
+            "default": "warn",
+            "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
+            "type": "string"
+          },
+          "oauth-client-id": {
+            "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
+            "type": "string"
+          },
+          "oauth-client-secret": {
+            "description": "OAuth client secret (default: TAILSCALE_OAUTH_CLIENT_SECRET)",
+            "type": "string"
+          },
+          "roster": {
+            "description": "test/check: PATH to a JSON login-to-role roster, asserting it is complete and authoritative",
+            "type": "string"
+          },
+          "sanitize": {
+            "default": "off",
+            "description": "output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)",
+            "type": "string"
+          },
+          "schema": {
+            "default": false,
+            "description": "print the machine-readable tool schema (JSON) and exit",
+            "type": "boolean"
+          },
+          "strict": {
+            "default": false,
+            "description": "test/check: reject a policy containing an unparseable rule instead of warning",
+            "type": "boolean"
+          },
+          "tailnet": {
+            "description": "tailnet name or ID (default: TAILSCALE_TAILNET)",
+            "type": "string"
+          },
+          "verbose": {
+            "default": false,
+            "description": "log operational detail to stderr",
+            "type": "boolean"
+          },
+          "version": {
+            "default": false,
+            "description": "print version and exit",
+            "type": "boolean"
+          },
+          "yes": {
+            "default": false,
+            "description": "confirm a confirmation-gated operation",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "tsacl-validate",
+      "nonDeterministicFields": [
+        "data.meta.idempotency_key",
+        "data.meta.span_id",
+        "data.meta.trace_id",
+        "meta.idempotency_key",
+        "meta.span_id",
+        "meta.trace_id"
+      ]
+    }
+  ]
+}

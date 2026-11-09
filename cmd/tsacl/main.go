@@ -32,6 +32,7 @@ import (
 	"time"
 
 	"github.com/jaxxstorm/tscli/pkg/tscli"
+	"github.com/rshade/ax-go"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -366,6 +367,10 @@ type result struct {
 	// an empty section as "external_tailnets": [] and lets every other command
 	// omit the field.
 	ExternalTailnets *[]aclpolicy.ExternalTailnetEntry `json:"external_tailnets,omitempty"`
+	// Meta carries the ax-go correlation metadata. It is the last field so the
+	// envelope without it is byte-identical to the pre-ax-go output, and it is
+	// emitted only in JSON mode.
+	Meta *ax.Metadata `json:"meta,omitempty"`
 }
 
 type localTestComponent struct {
@@ -422,11 +427,8 @@ func realMain() int {
 	if apiURL == "" {
 		apiURL = tailapi.DefaultBaseURL
 	}
-	err := run(ctx, os.Args[1:], os.Getenv, client, apiURL, os.Stdout, os.Stderr)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "tsacl:", err)
-	}
-	return exitCode(err)
+	code, _ := execute(ctx, os.Args[1:], os.Getenv, client, apiURL, os.Stdout, os.Stderr)
+	return code
 }
 
 // restoreDefaultAfterCancel hands the interrupt back to the Go runtime as soon
@@ -457,10 +459,16 @@ func restoreDefaultAfterCancel(ctx context.Context, stop context.CancelFunc) {
 // stack cannot produce.
 func exitCode(err error) int {
 	var ue usageError
+	var es exitStatusError
+	var axErr *ax.Error
 	outcome := tailapi.ClassifyValidation(err)
 	switch {
 	case err == nil:
 		return exitOK
+	case errors.As(err, &es):
+		return es.code
+	case errors.As(err, &axErr):
+		return axErr.ExitCode()
 	case errors.Is(err, errReachabilityIndeterminate), outcome == tailapi.ValidationIndeterminate:
 		return exitIndeterminate
 	// A control plane that never judged the policy is a collection failure, not
@@ -541,6 +549,8 @@ func newRootCommand(getenv func(string) string, opts *options) *cobra.Command {
 	return root
 }
 
+// run executes the CLI and returns the command's error. The ax-go runtime has
+// already written the stderr envelope by the time it returns.
 func run(
 	ctx context.Context,
 	args []string,
@@ -549,9 +559,23 @@ func run(
 	apiURL string,
 	stdout, stderr io.Writer,
 ) error {
+	_, err := execute(ctx, args, getenv, httpClient, apiURL, stdout, stderr)
+	return err
+}
+
+// execute runs the CLI under the ax-go runtime. It returns the process exit
+// code together with the command's own error, which exitCode classifies.
+func execute(
+	ctx context.Context,
+	args []string,
+	getenv func(string) string,
+	httpClient *http.Client,
+	apiURL string,
+	stdout, stderr io.Writer,
+) (int, error) {
 	var opts options
 	var res *result
-	format := formatHuman
+	format := ""
 	colorRaw := colorModeAuto
 	verbose := false
 	showSchema := false
@@ -559,30 +583,18 @@ func run(
 	var outputSanitizer *sanitize.Sanitizer
 
 	root := newRootCommand(getenv, &opts)
-	root.PersistentFlags().StringVar(&format, "format", formatHuman, "output format: human|json")
-	root.PersistentFlags().StringVar(&colorRaw, "color", colorModeAuto, "colorize human output: auto|always|never")
-	root.PersistentFlags().BoolVar(&verbose, "verbose", false, "log operational detail to stderr")
-	root.PersistentFlags().StringVar(&sanitizeLevel, "sanitize", string(sanitize.Off),
-		"output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)")
-	// Registered but unbound: cobra's Version field intercepts --version before
-	// RunE, so no handler here would ever run. The registration must stay under
-	// this exact name and usage text, which schema.golden.json locks — cobra's
-	// own auto-registered flag would read "version for tsacl" and break the
-	// golden.
-	root.PersistentFlags().Bool("version", false, "print version and exit")
-	root.PersistentFlags().BoolVar(&showSchema, "schema", false,
-		"print the machine-readable tool schema (JSON) and exit")
+	registerGlobalFlags(root.PersistentFlags(), &format, &colorRaw, &verbose, &sanitizeLevel, &showSchema)
 	root.RunE = func(cmd *cobra.Command, _ []string) error {
 		if showSchema {
-			return printSchema(stdout, cmd.Flags())
+			return printSchema(cmd.OutOrStdout(), cmd.Flags())
 		}
-		usage(stderr, cmd.Flags())
+		usage(cmd.ErrOrStderr(), cmd.Flags())
 		return usageError{errors.New("a command is required")}
 	}
 	root.PersistentPreRunE = func(cmd *cobra.Command, _ []string) error {
 		persistent := root.PersistentFlags()
 		configured, sanitizeErr := configureOutputSanitizer(
-			cmd, persistent, getenv, stderr, sanitizeLevel, opts.tailnet,
+			cmd, persistent, getenv, cmd.ErrOrStderr(), sanitizeLevel, opts.tailnet,
 		)
 		if sanitizeErr != nil {
 			return sanitizeErr
@@ -591,6 +603,7 @@ func run(
 		resolveCredentials(&opts, getenv,
 			persistent.Changed("api-key"),
 			persistent.Changed("oauth-client-id") || persistent.Changed("oauth-client-secret"))
+		format = resolveFormat(cmd.Context(), format)
 		if format != formatHuman && format != formatJSON {
 			return usagef("unknown -format %q; want human or json", format)
 		}
@@ -610,37 +623,77 @@ func run(
 		result:     &res,
 		httpClient: httpClient,
 		apiURL:     apiURL,
-		stdout:     stdout,
-		stderr:     stderr,
 		format:     &format,
 		colorRaw:   &colorRaw,
 		getenv:     getenv,
 		verbose:    &verbose,
 		sanitizer:  &outputSanitizer,
+		axLogger:   newAxLogger(ctx, stderr),
 	}
-	addSubcommands(ctx, root, &deps)
+	addSubcommands(root, &deps)
 
-	root.SetArgs(cliflags.Normalize(root, args))
-	root.SetOut(stdout)
-	root.SetErr(stderr)
-	err := root.Execute()
-	// Cobra returns "unknown command \"x\" for \"tsacl\"" (or, from a
-	// subcommand's NoArgs validator, "...for \"tsacl lint\"") as a plain
-	// error; dispatch() used to return the same wording wrapped in usageError,
-	// so the wrap happens here rather than only in main() because tests call
-	// run() directly and check exitCode() on its result.
-	if err != nil && strings.HasPrefix(err.Error(), "unknown command") {
-		err = usageError{err}
-	}
-	res, err = sanitizeOutcome(res, err, outputSanitizer)
-	if res != nil {
-		mode, _ := parseColorMode(colorRaw)
-		colorize := colorEnabled(format, mode, stdout, getenv)
-		if renderErr := render(stdout, format, colorize, res); renderErr != nil {
-			return renderErr
+	var commandErr error
+	finish := func(cmd *cobra.Command, err error) error {
+		err = classifyCobraError(err)
+		var sanitized *result
+		sanitized, err = sanitizeOutcome(withMeta(cmd.Context(), format, res), err, outputSanitizer)
+		res = nil
+		if renderErr := renderOutcome(cmd.OutOrStdout(), getenv, format, colorRaw, sanitized); renderErr != nil {
+			err = renderErr
 		}
+		if err == nil {
+			return nil
+		}
+		if commandErr == nil {
+			commandErr = err
+		}
+		return axErrorFor(cmd.Context(), err)
 	}
-	return err
+	root.SetFlagErrorFunc(func(cmd *cobra.Command, err error) error {
+		return finish(cmd, usageError{err})
+	})
+	adaptTree(root, finish)
+
+	runRoot := rootForArgs(root, cliflags.Normalize(root, args), finish)
+	code := ax.Execute(ctx, runRoot, runtimeOptions(getenv, stdout, stderr, deps.axLogger)...)
+	return code, withExitStatus(commandErr, code)
+}
+
+// registerGlobalFlags registers the flags every command inherits.
+func registerGlobalFlags(
+	flags *pflag.FlagSet,
+	format, colorRaw *string,
+	verbose *bool,
+	sanitizeLevel *string,
+	showSchema *bool,
+) {
+	flags.StringVar(format, "format", "", "output format: human|json")
+	flags.StringVar(colorRaw, "color", colorModeAuto, "colorize human output: auto|always|never")
+	flags.BoolVar(verbose, "verbose", false, "log operational detail to stderr")
+	flags.StringVar(sanitizeLevel, "sanitize", string(sanitize.Off),
+		"output sanitization level: off|identity|strict (a non-off TAILSCALE_SANITIZE value overrides this flag)")
+	// Registered but unbound: cobra's Version field intercepts --version before
+	// RunE, so no handler here would ever run. The registration must stay under
+	// this exact name and usage text, which schema.golden.json locks — cobra's
+	// own auto-registered flag would read "version for tsacl" and break the
+	// golden.
+	flags.Bool("version", false, "print version and exit")
+	// Registered here so cliflags.Normalize rewrites the single-dash spellings
+	// before ax.Execute runs; ax-go adopts flags that already exist.
+	flags.Bool("dry-run", false, "emit the envelope without side effects")
+	flags.Bool("yes", false, "confirm a confirmation-gated operation")
+	flags.String("idempotency-key", "", "opaque key used to prevent duplicate-create retries")
+	flags.BoolVar(showSchema, "schema", false,
+		"print the machine-readable tool schema (JSON) and exit")
+}
+
+// renderOutcome writes the result envelope, if the command produced one.
+func renderOutcome(stdout io.Writer, getenv func(string) string, format, colorRaw string, res *result) error {
+	if res == nil {
+		return nil
+	}
+	mode, _ := parseColorMode(colorRaw)
+	return render(stdout, format, colorEnabled(format, mode, stdout, getenv), res)
 }
 
 func configureOutputSanitizer(
@@ -757,29 +810,6 @@ func loadRoster(path string) (map[string]tailscale.UserRole, error) {
 		return nil, usagef("could not load --roster %s: %v", path, err)
 	}
 	return roster, nil
-}
-
-// newLogger builds the stderr diagnostics logger. When sanitizer is active it
-// rewrites every string and error attribute through the same pseudonym map as
-// the rendered result, so --sanitize also covers log lines.
-func newLogger(w io.Writer, verbose bool, sanitizer *sanitize.Sanitizer) *slog.Logger {
-	level := slog.LevelWarn
-	if verbose {
-		level = slog.LevelDebug
-	}
-	options := &slog.HandlerOptions{Level: level}
-	if sanitizer != nil && sanitizer.Level() != sanitize.Off {
-		options.ReplaceAttr = func(_ []string, attr slog.Attr) slog.Attr {
-			if attr.Value.Kind() == slog.KindString {
-				return slog.String(attr.Key, scrubText(sanitizer, attr.Value.String()))
-			}
-			if err, ok := attr.Value.Any().(error); ok && attr.Value.Kind() == slog.KindAny {
-				return slog.String(attr.Key, scrubText(sanitizer, err.Error()))
-			}
-			return attr
-		}
-	}
-	return slog.New(slog.NewTextHandler(w, options))
 }
 
 // sanitizeOutcome applies the active sanitizer to the command result and to the
@@ -1018,6 +1048,7 @@ type streamEmitter struct {
 	format    string
 	colorize  bool
 	sanitizer *sanitize.Sanitizer
+	meta      *ax.Metadata
 	wrote     bool
 }
 
@@ -1026,11 +1057,17 @@ func newStreamEmitter(
 	format string,
 	colorize bool,
 	sanitizer *sanitize.Sanitizer,
+	meta *ax.Metadata,
 ) *streamEmitter {
-	return &streamEmitter{w: w, format: format, colorize: colorize, sanitizer: sanitizer}
+	return &streamEmitter{w: w, format: format, colorize: colorize, sanitizer: sanitizer, meta: meta}
 }
 
 func (e *streamEmitter) emit(res *result) error {
+	if e.format == formatJSON && e.meta != nil {
+		stamped := *res
+		stamped.Meta = e.meta
+		res = &stamped
+	}
 	if e.sanitizer != nil && e.sanitizer.Level() != sanitize.Off {
 		res = sanitizeResultEnvelope(res, e.sanitizer)
 	}

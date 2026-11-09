@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -85,4 +86,56 @@ func schemaWithoutHelp(t *testing.T, raw []byte, flagField string) []byte {
 		t.Fatalf("encode schema: %v", err)
 	}
 	return append(normalized, '\n')
+}
+
+func TestAxSchemaGoldens(t *testing.T) {
+	t.Parallel()
+	for _, testCase := range []struct {
+		name   string
+		args   []string
+		golden string
+	}{
+		{"ax", []string{"__schema"}, "ax_schema.golden.json"},
+		{"mcp", []string{"__schema", "--as=mcp"}, "ax_schema_mcp.golden.json"},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			got := versionlessSchema(t, testCase.args)
+			path := filepath.Join("testdata", testCase.golden)
+			if *updateSchemaGolden {
+				if err := os.WriteFile(path, got, 0o600); err != nil {
+					t.Fatal(err)
+				}
+				return
+			}
+			want, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(got, want) {
+				t.Errorf("%s changed; regenerate with -update and review\n%s", testCase.golden, got)
+			}
+		})
+	}
+}
+
+// versionlessSchema runs a discovery command and drops the build-dependent
+// version, the only non-deterministic field in a schema document.
+func versionlessSchema(t *testing.T, args []string) []byte {
+	t.Helper()
+	var stdout, stderr strings.Builder
+	getenv := func(string) string { return "" }
+	if err := run(context.Background(), args, getenv, nil, "", &stdout, &stderr); err != nil {
+		t.Fatalf("run = %v, stderr %q", err, stderr.String())
+	}
+	var document map[string]any
+	if err := json.Unmarshal([]byte(stdout.String()), &document); err != nil {
+		t.Fatalf("not JSON: %v", err)
+	}
+	delete(document, "version")
+	out, err := json.MarshalIndent(document, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return append(out, '\n')
 }
