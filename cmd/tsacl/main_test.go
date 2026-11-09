@@ -1800,9 +1800,7 @@ func TestPolicyTestHumanOutputAndExitCodes(t *testing.T) {
 					t.Errorf("stdout missing %q:\n%s", want, stdout.String())
 				}
 			}
-			if stderr.Len() != 0 {
-				t.Errorf("stderr = %q, want quiet", stderr.String())
-			}
+			assertVerdictStderr(t, stderr.String(), err)
 		})
 	}
 }
@@ -1848,9 +1846,7 @@ func TestPolicyTestJSONFailureEnvelope(t *testing.T) {
 		res.TestSummary.Failed != 1 {
 		t.Errorf("TestSummary = %#v", res.TestSummary)
 	}
-	if stderr.Len() != 0 {
-		t.Errorf("stderr = %q, want quiet", stderr.String())
-	}
+	decodeAxError(t, stderr.String())
 }
 
 // TestPolicyTestReportsUnevaluatedSSHTests pins the signal that keeps a
@@ -2428,9 +2424,7 @@ func TestCheckHumanOutputAndExitCodes(t *testing.T) {
 					t.Errorf("stdout missing %q:\n%s", want, stdout.String())
 				}
 			}
-			if stderr.Len() != 0 {
-				t.Errorf("stderr = %q, want quiet", stderr.String())
-			}
+			assertVerdictStderr(t, stderr.String(), err)
 		})
 	}
 }
@@ -2500,8 +2494,10 @@ func assertCheckJSON(t *testing.T, path string, port uint16, wantCode int, wantA
 	if res.Evidence == "" || len(res.Trace) == 0 {
 		t.Errorf("decision evidence missing: %#v", res)
 	}
-	if stderr.Len() != 0 {
-		t.Errorf("stderr = %q, want quiet", stderr.String())
+	if wantCode == exitOK {
+		assertVerdictStderr(t, stderr.String(), nil)
+	} else {
+		decodeAxError(t, stderr.String())
 	}
 }
 
@@ -4090,9 +4086,7 @@ func TestLintHumanOutputAndExitCodes(t *testing.T) {
 					t.Errorf("stdout missing %q:\n%s", want, stdout.String())
 				}
 			}
-			if stderr.Len() != 0 {
-				t.Errorf("stderr = %q, want quiet", stderr.String())
-			}
+			assertVerdictStderr(t, stderr.String(), err)
 		})
 	}
 }
@@ -4192,9 +4186,7 @@ func TestLintAdviceHumanOutputIsLastAndASCII(t *testing.T) {
 			t.Fatalf("stdout contains non-ASCII byte %#x: %q", character, stdout.String())
 		}
 	}
-	if stderr.Len() != 0 {
-		t.Errorf("stderr = %q, want quiet", stderr.String())
-	}
+	assertVerdictStderr(t, stderr.String(), err)
 }
 
 // mixedLintPolicy produces exactly one info finding (group:unused is
@@ -4278,9 +4270,7 @@ func TestLintSeverityFiltersFindings(t *testing.T) {
 				t.Fatalf("exit code = %d, want %d (error %v)", code, testCase.wantCode, err)
 			}
 			assertOutputFragments(t, stdout.String(), testCase.want, testCase.notWant)
-			if stderr.Len() != 0 {
-				t.Errorf("stderr = %q, want quiet", stderr.String())
-			}
+			assertVerdictStderr(t, stderr.String(), err)
 		})
 	}
 }
@@ -4486,9 +4476,7 @@ func TestLintHumanSummaryRendersBothSvcReferenceSets(t *testing.T) {
 	if !strings.Contains(stdout.String(), want) {
 		t.Errorf("stdout missing %q:\n%s", want, stdout.String())
 	}
-	if stderr.Len() != 0 {
-		t.Errorf("stderr = %q, want quiet", stderr.String())
-	}
+	assertVerdictStderr(t, stderr.String(), err)
 }
 
 func TestLintJSONEnvelope(t *testing.T) {
@@ -4527,9 +4515,7 @@ func TestLintJSONEnvelope(t *testing.T) {
 			t.Errorf("finding missing required fields: %#v", finding)
 		}
 	}
-	if stderr.Len() != 0 {
-		t.Errorf("stderr = %q, want quiet", stderr.String())
-	}
+	decodeAxError(t, stderr.String())
 }
 
 func TestLintVerboseTraceGoesToStderr(t *testing.T) {
@@ -4998,7 +4984,7 @@ func writeTestPolicy(t *testing.T, path, content string) {
 func TestStreamEmitterJSONIsNDJSON(t *testing.T) {
 	t.Parallel()
 	var out strings.Builder
-	emitter := newStreamEmitter(&out, formatJSON, false, nil)
+	emitter := newStreamEmitter(&out, formatJSON, false, nil, nil)
 	for _, message := range []string{"first", "second"} {
 		if err := emitter.emit(newResult(cmdTest, statusOK, message)); err != nil {
 			t.Fatalf("emit: %v", err)
@@ -5022,7 +5008,7 @@ func TestStreamEmitterJSONIsNDJSON(t *testing.T) {
 func TestStreamEmitterHumanSeparatesRunsWithOneBlankLine(t *testing.T) {
 	t.Parallel()
 	var out strings.Builder
-	emitter := newStreamEmitter(&out, formatHuman, false, nil)
+	emitter := newStreamEmitter(&out, formatHuman, false, nil, nil)
 	for _, message := range []string{"first", "second"} {
 		if err := emitter.emit(newResult(cmdTest, statusOK, message)); err != nil {
 			t.Fatalf("emit: %v", err)

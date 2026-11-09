@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -152,7 +153,7 @@ func TestTSACLValidationWarningClassification(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if warningStdout != string(wantGolden) {
+	if stripMeta(warningStdout) != string(wantGolden) {
 		t.Errorf("warnings JSON differs from golden:\ngot:\n%s\nwant:\n%s", warningStdout, wantGolden)
 	}
 	assertContains(t, warningStderr, "ACL validation warning", "group is not syncing from SCIM")
@@ -379,11 +380,21 @@ func (r cliRunner) mustSucceed(t *testing.T, args ...string) string {
 
 func (r cliRunner) mustFail(t *testing.T, args ...string) string {
 	t.Helper()
-	output, err := r.run(t, args...)
+	stdout, stderr, err := r.runSplit(t, args...)
 	if err == nil {
-		t.Fatalf("tsacl %s unexpectedly succeeded:\n%s", strings.Join(args, " "), output)
+		t.Fatalf("tsacl %s unexpectedly succeeded:\n%s%s", strings.Join(args, " "), stdout, stderr)
 	}
-	return output
+	return stdout + decodeErrorEnvelope(stderr)
+}
+
+func decodeErrorEnvelope(stderr string) string {
+	var envelope struct {
+		Message string `json:"message"`
+	}
+	if json.Unmarshal([]byte(strings.TrimSpace(stderr)), &envelope) != nil || envelope.Message == "" {
+		return stderr
+	}
+	return "tsacl: " + envelope.Message + "\n"
 }
 
 func (r cliRunner) run(t *testing.T, args ...string) (string, error) {
@@ -612,3 +623,9 @@ func policyETag(policy string) string {
 func trimETag(etag string) string {
 	return strings.Trim(etag, `"`)
 }
+
+var metaPattern = regexp.MustCompile(`,\n  "meta": \{[^}]*\}`)
+
+// stripMeta removes the non-deterministic trailing meta object so the rest of
+// the envelope can be compared byte for byte against a golden.
+func stripMeta(output string) string { return metaPattern.ReplaceAllString(output, "") }

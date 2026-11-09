@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"errors"
 	"io"
 	"log/slog"
@@ -10,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rshade/ax-go"
 	"github.com/spf13/cobra"
 
 	"github.com/rshade/tsacl/internal/aclpolicy"
@@ -24,28 +24,27 @@ type commandDeps struct {
 	result     **result
 	httpClient *http.Client
 	apiURL     string
-	stdout     io.Writer
-	stderr     io.Writer
 	format     *string
 	colorRaw   *string
 	getenv     func(string) string
 	verbose    *bool
 	sanitizer  **sanitize.Sanitizer
+	axLogger   ax.Logger
 }
 
-func (d *commandDeps) logger() *slog.Logger { return newLogger(d.stderr, *d.verbose, *d.sanitizer) }
+func (d *commandDeps) logger() *slog.Logger { return newLoggerOn(d.axLogger, *d.verbose, *d.sanitizer) }
 
 // colorize resolves whether human output on stdout should carry ANSI color.
 // It reads the flag pointers after cobra has parsed them, so watch mode (which
 // builds its streamEmitter inside a command's RunE) sees the resolved values.
-func (d *commandDeps) colorize() bool {
+func (d *commandDeps) colorize(w io.Writer) bool {
 	mode, _ := parseColorMode(*d.colorRaw)
-	return colorEnabled(*d.format, mode, d.stdout, d.getenv)
+	return colorEnabled(*d.format, mode, w, d.getenv)
 }
 
 // addSubcommands registers the leaf commands, grouping related authoring
 // commands under their noun parent.
-func addSubcommands(ctx context.Context, root *cobra.Command, deps *commandDeps) {
+func addSubcommands(root *cobra.Command, deps *commandDeps) {
 	grant := &cobra.Command{Use: cmdGrant, Short: "Manage grants", RunE: runParentCommand}
 	grant.AddCommand(newGrantAddCommand(deps), newGrantRemoveCommand(deps))
 
@@ -99,17 +98,17 @@ func addSubcommands(ctx context.Context, root *cobra.Command, deps *commandDeps)
 		newInitCommand(deps),
 		newMergeCommand(deps),
 		newNormalizeCommand(deps),
-		newValidateCommand(ctx, deps),
-		newTestCommand(ctx, deps),
-		newCheckCommand(ctx, deps),
-		newLintCommand(ctx, deps),
-		newJQCommand(ctx, deps),
-		newPullCommand(ctx, deps),
-		newPlanCommand(ctx, deps),
-		newUploadCommand(ctx, deps),
+		newValidateCommand(deps),
+		newTestCommand(deps),
+		newCheckCommand(deps),
+		newLintCommand(deps),
+		newJQCommand(deps),
+		newPullCommand(deps),
+		newPlanCommand(deps),
+		newUploadCommand(deps),
 	)
+	declareNonDeterministic(root)
 }
-
 func newNodeAttrAddCommand(deps *commandDeps) *cobra.Command {
 	var flags nodeAttrFlags
 	cmd := &cobra.Command{
@@ -531,7 +530,7 @@ func newPostureSetCommand(deps *commandDeps) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			out, err := runPostureSet(
 				deps.opts.file, args, comment, cmd.Flags().Changed(commentFlagName), overwriteComment,
-				deps.stderr,
+				cmd.ErrOrStderr(),
 			)
 			*deps.result = out
 			return err
@@ -635,12 +634,13 @@ func newMergeCommand(deps *commandDeps) *cobra.Command {
 	return cmd
 }
 
-func newValidateCommand(ctx context.Context, deps *commandDeps) *cobra.Command {
+func newValidateCommand(deps *commandDeps) *cobra.Command {
 	return &cobra.Command{
 		Use:   cmdValidate,
 		Short: "Validate the policy via the Tailscale API",
 		Args:  cobra.NoArgs,
-		RunE: func(_ *cobra.Command, _ []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			ctx := cmd.Context()
 			out, err := runValidate(ctx, *deps.opts, deps.httpClient, deps.apiURL, deps.logger())
 			*deps.result = out
 			return err
@@ -648,7 +648,7 @@ func newValidateCommand(ctx context.Context, deps *commandDeps) *cobra.Command {
 	}
 }
 
-func newTestCommand(ctx context.Context, deps *commandDeps) *cobra.Command {
+func newTestCommand(deps *commandDeps) *cobra.Command {
 	var watch bool
 	var validate bool
 	var interval time.Duration
@@ -657,6 +657,7 @@ func newTestCommand(ctx context.Context, deps *commandDeps) *cobra.Command {
 		Short: testSummary,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			ctx := cmd.Context()
 			if validate && !watch {
 				return usagef("--validate applies only to --watch; use the validate command for a single server check")
 			}
@@ -667,9 +668,19 @@ func newTestCommand(ctx context.Context, deps *commandDeps) *cobra.Command {
 				return usagef("--interval must be positive, got %s", interval)
 			}
 			out, err := runTest(
-				ctx, *deps.opts, testOptions{watch: watch, validate: validate, interval: interval}, deps.logger(),
-				newStreamEmitter(deps.stdout, *deps.format, deps.colorize(), *deps.sanitizer),
-				deps.httpClient, deps.apiURL,
+				ctx,
+				*deps.opts,
+				testOptions{watch: watch, validate: validate, interval: interval},
+				deps.logger(),
+				newStreamEmitter(
+					cmd.OutOrStdout(),
+					*deps.format,
+					deps.colorize(cmd.OutOrStdout()),
+					*deps.sanitizer,
+					metaFor(cmd.Context(), *deps.format),
+				),
+				deps.httpClient,
+				deps.apiURL,
 			)
 			*deps.result = out
 			return err
@@ -684,41 +695,33 @@ func newTestCommand(ctx context.Context, deps *commandDeps) *cobra.Command {
 	return cmd
 }
 
+type testEditFunc func(file, source string, deny, accept, postureAttrs []string, stderr io.Writer) (*result, error)
+
 func newTestAddCommand(deps *commandDeps) *cobra.Command {
-	var source string
-	var deny, accept, postureAttrFlags stringListFlag
-	cmd := &cobra.Command{
-		Use:   subAdd,
-		Short: "Add deny or accept policy test assertions without evaluating them",
-		Args:  cobra.NoArgs,
-		RunE: func(_ *cobra.Command, _ []string) error {
-			out, err := runTestAdd(
-				deps.opts.file, source, []string(deny), []string(accept),
-				[]string(postureAttrFlags), deps.stderr,
-			)
-			*deps.result = out
-			return err
-		},
-	}
-	cmd.Flags().StringVar(&source, "src", "", "assertion source")
-	cmd.Flags().Var(&deny, "deny", "denied destination in DST:PORT form; may be repeated")
-	cmd.Flags().Var(&accept, "accept", "accepted destination in DST:PORT form; may be repeated")
-	cmd.Flags().Var(&postureAttrFlags, "src-posture-attr",
-		"posture attribute KEY=VALUE for the test entry; may be repeated. Typed like check's --posture-attr")
-	return cmd
+	return newTestEditCommand(deps, subAdd,
+		"Add deny or accept policy test assertions without evaluating them",
+		"posture attribute KEY=VALUE for the test entry; may be repeated. Typed like check's --posture-attr",
+		runTestAdd)
 }
 
 func newTestRemoveCommand(deps *commandDeps) *cobra.Command {
+	return newTestEditCommand(deps, subRemove,
+		"Remove deny or accept policy test assertions; may renumber later assertion IDs",
+		"target only the entry whose srcPostureAttrs matches exactly; may be repeated",
+		runTestRemove)
+}
+
+func newTestEditCommand(deps *commandDeps, use, short, postureUsage string, edit testEditFunc) *cobra.Command {
 	var source string
 	var deny, accept, postureAttrFlags stringListFlag
 	cmd := &cobra.Command{
-		Use:   subRemove,
-		Short: "Remove deny or accept policy test assertions; may renumber later assertion IDs",
+		Use:   use,
+		Short: short,
 		Args:  cobra.NoArgs,
-		RunE: func(_ *cobra.Command, _ []string) error {
-			out, err := runTestRemove(
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			out, err := edit(
 				deps.opts.file, source, []string(deny), []string(accept),
-				[]string(postureAttrFlags), deps.stderr,
+				[]string(postureAttrFlags), cmd.ErrOrStderr(),
 			)
 			*deps.result = out
 			return err
@@ -727,12 +730,11 @@ func newTestRemoveCommand(deps *commandDeps) *cobra.Command {
 	cmd.Flags().StringVar(&source, "src", "", "assertion source")
 	cmd.Flags().Var(&deny, "deny", "denied destination in DST:PORT form; may be repeated")
 	cmd.Flags().Var(&accept, "accept", "accepted destination in DST:PORT form; may be repeated")
-	cmd.Flags().Var(&postureAttrFlags, "src-posture-attr",
-		"target only the entry whose srcPostureAttrs matches exactly; may be repeated")
+	cmd.Flags().Var(&postureAttrFlags, "src-posture-attr", postureUsage)
 	return cmd
 }
 
-func newCheckCommand(ctx context.Context, deps *commandDeps) *cobra.Command {
+func newCheckCommand(deps *commandDeps) *cobra.Command {
 	var source, destination, protocol string
 	var port int
 	var postureAttrFlags stringListFlag
@@ -742,6 +744,7 @@ func newCheckCommand(ctx context.Context, deps *commandDeps) *cobra.Command {
 		Short: "Answer one reachability question locally",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			ctx := cmd.Context()
 			src, target, proto, err := resolveCheckTarget(
 				source, destination, cmd.Flags().Changed("port"), port, protocol,
 			)
@@ -772,7 +775,7 @@ func newCheckCommand(ctx context.Context, deps *commandDeps) *cobra.Command {
 	return cmd
 }
 
-func newLintCommand(ctx context.Context, deps *commandDeps) *cobra.Command {
+func newLintCommand(deps *commandDeps) *cobra.Command {
 	var severity, wildcard, configPath string
 	var strictSCIMGroups bool
 	var online bool
@@ -782,6 +785,7 @@ func newLintCommand(ctx context.Context, deps *commandDeps) *cobra.Command {
 		Short: lintSummary,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			ctx := cmd.Context()
 			lintOpts, threshold, err := resolveLintOptions(
 				severity, wildcard, strictSCIMGroups, scimDomains,
 			)
@@ -814,12 +818,13 @@ func newLintCommand(ctx context.Context, deps *commandDeps) *cobra.Command {
 	return cmd
 }
 
-func newPlanCommand(ctx context.Context, deps *commandDeps) *cobra.Command {
+func newPlanCommand(deps *commandDeps) *cobra.Command {
 	return &cobra.Command{
 		Use:   cmdPlan,
 		Short: "Diff the policy against the live tailnet (read-only)",
 		Args:  cobra.NoArgs,
-		RunE: func(_ *cobra.Command, _ []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			ctx := cmd.Context()
 			out, err := runPlan(ctx, *deps.opts, deps.httpClient, deps.apiURL, deps.logger())
 			*deps.result = out
 			return err
@@ -827,7 +832,7 @@ func newPlanCommand(ctx context.Context, deps *commandDeps) *cobra.Command {
 	}
 }
 
-func newPullCommand(ctx context.Context, deps *commandDeps) *cobra.Command {
+func newPullCommand(deps *commandDeps) *cobra.Command {
 	var force bool
 	cmd := &cobra.Command{
 		Use:   cmdPull,
@@ -835,7 +840,8 @@ func newPullCommand(ctx context.Context, deps *commandDeps) *cobra.Command {
 		Long: "Bootstrap a local policy from the live tailnet. This is an adoption step, not a routine sync; " +
 			"an existing --file is preserved unless --force is supplied.",
 		Args: cobra.NoArgs,
-		RunE: func(_ *cobra.Command, _ []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			ctx := cmd.Context()
 			out, err := runPull(ctx, *deps.opts, force, deps.httpClient, deps.apiURL)
 			*deps.result = out
 			return err
@@ -845,7 +851,7 @@ func newPullCommand(ctx context.Context, deps *commandDeps) *cobra.Command {
 	return cmd
 }
 
-func newUploadCommand(ctx context.Context, deps *commandDeps) *cobra.Command {
+func newUploadCommand(deps *commandDeps) *cobra.Command {
 	var acceptRemoteChanges bool
 	cmd := &cobra.Command{
 		Use:   cmdUpload,
@@ -853,7 +859,7 @@ func newUploadCommand(ctx context.Context, deps *commandDeps) *cobra.Command {
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			out, err := runUpload(
-				ctx,
+				cmd.Context(),
 				*deps.opts,
 				cmd.Flags().Changed("if-match"),
 				acceptRemoteChanges,

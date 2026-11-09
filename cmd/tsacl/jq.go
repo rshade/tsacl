@@ -13,7 +13,7 @@ import (
 	"github.com/tailscale/hujson"
 )
 
-func newJQCommand(ctx context.Context, deps *commandDeps) *cobra.Command {
+func newJQCommand(deps *commandDeps) *cobra.Command {
 	return &cobra.Command{
 		Use:   cmdJQ + " PROGRAM",
 		Short: "Query the policy with the embedded jq engine",
@@ -26,9 +26,10 @@ func newJQCommand(ctx context.Context, deps *commandDeps) *cobra.Command {
 			}
 			return nil
 		},
-		RunE: func(_ *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
 			buffered := *deps.format == formatJSON
-			values, err := runJQ(ctx, deps.opts.file, args[0], buffered, deps.stdout)
+			values, err := runJQ(ctx, deps.opts.file, args[0], buffered, cmd.OutOrStdout())
 			if err != nil {
 				return err
 			}

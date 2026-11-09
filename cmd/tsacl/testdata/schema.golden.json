@@ -190,14 +190,24 @@
       "usage": "colorize human output: auto|always|never"
     },
     {
+      "default": "false",
+      "name": "dry-run",
+      "usage": "emit the envelope without side effects"
+    },
+    {
       "default": "acl.json",
       "name": "file",
       "usage": "policy file (typed edits preserve comments in JSON and HuJSON)"
     },
     {
-      "default": "human",
+      "default": "",
       "name": "format",
       "usage": "output format: human|json"
+    },
+    {
+      "default": "",
+      "name": "idempotency-key",
+      "usage": "opaque key used to prevent duplicate-create retries"
     },
     {
       "default": "",
@@ -253,6 +263,11 @@
       "default": "false",
       "name": "version",
       "usage": "print version and exit"
+    },
+    {
+      "default": "false",
+      "name": "yes",
+      "usage": "confirm a confirmation-gated operation"
     }
   ],
   "lint_findings": [
