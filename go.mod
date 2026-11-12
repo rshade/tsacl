@@ -1,6 +1,6 @@
 module github.com/rshade/tsacl
 
-go 1.27.3
+go 1.27.4
 
 require (
 	github.com/hexops/gotextdiff v1.0.3
@@ -16,7 +16,7 @@ require (
 	golang.org/x/oauth2 v0.37.0
 	golang.org/x/sys v0.50.0
 	golang.org/x/term v0.48.0
-	tailscale.com v1.104.5
+	tailscale.com v1.104.7
 	tailscale.com/client/tailscale/v2 v2.12.0
 )
 
