@@ -7,7 +7,7 @@ goreleaser = "2.20.0"
 actionlint = "1.7.12"
 gitleaks = "8.30.1"
 jq = "1.8.2"
-trufflehog = "3.99.8"
+trufflehog = "3.99.9"
 "go:golang.org/x/vuln/cmd/govulncheck" = "1.9.0"
 "go:github.com/google/go-licenses/v2" = "2.0.1"
 # Node only provides the npm backend for the two CLIs below.
