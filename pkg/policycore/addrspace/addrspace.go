@@ -41,7 +41,7 @@ func Overlaps(a, b string) (bool, error) {
 // pairwise comparison rather than aborting the whole call, so one bad entry
 // in a larger set never hides the overlaps among the rest. A nil error map
 // means every entry parsed. Pairs are returned sorted ascending by (i, j);
-// downstream callers such as tail-ipam's subnet-pool registry overlap validation
+// downstream callers such as tsipam's subnet-pool registry overlap validation
 // depend on this ordering for deterministic error messages.
 func OverlappingPairs(cidrs []string) ([][2]int, map[int]error) {
 	projections := make([]prefixProjection, 0, len(cidrs))

@@ -9,7 +9,7 @@ import (
 )
 
 // These bound expansion work, not address-space size: an IPv6 /0 is one
-// prefix. They are the limits tail-ipam's resolver applies, so the two tools
+// prefix. They are the limits tsipam's resolver applies, so the two tools
 // give up on the same policy.
 const (
 	maxIPSetDepth    = 128
@@ -30,7 +30,7 @@ var (
 // value must be a literal address or prefix, a range contributes every
 // address between its ends, and an ipset: reference recurses with a
 // path-scoped cycle guard, a per-call memo, and the same depth and size
-// limits tail-ipam applies.
+// limits tsipam applies.
 //
 // A set that cannot be materialized — a member that does not parse, an
 // implicit member beside a remove (ValidateIPSetOperations), a host: alias

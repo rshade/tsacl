@@ -4,7 +4,7 @@
 
 Provide policy-agnostic IPv4/IPv6 subnet arithmetic — classic block facts,
 prefix splitting, and 4-in-6 normalization — with no knowledge of
-`tail-ipam`'s registry, CLI, or Tailscale-specific concepts.
+`tsipam`'s registry, CLI, or Tailscale-specific concepts.
 
 ## Requirements
 

@@ -16,14 +16,16 @@ import (
 )
 
 // TestResolveIPSetParityWithTailIPAM pins this resolver to the answer
-// tail-ipam's check-policy gives for the same policy. The fixture is a
+// tsipam's check-policy gives for the same policy. The fixture is a
 // snapshot of tail-ipam/internal/policycheck/testdata/operations.policy.hujson
-// and the expected prefixes are the authored CIDRs its
-// operations.report.golden.json recorded when the snapshot was taken —
-// tail-ipam preserves each addition's boundaries where this resolver merges,
-// so the comparison is address-set equality, which for this fixture is also
-// prefix equality. It is deliberately not a live read of tail-ipam's tree: a
-// tail-ipam fixture edit must not fail this module's suite.
+// from the monorepo, now github.com/rshade/tsipam
+// internal/policycheck/testdata/operations.policy.hujson, and the expected
+// prefixes are the authored CIDRs its operations.report.golden.json recorded
+// when the snapshot was taken. tsipam preserves each addition's boundaries
+// where this resolver merges, so the comparison is address-set equality,
+// which for this fixture is also prefix equality. It is deliberately not a
+// live read of tsipam's tree: a tsipam fixture edit must not fail this
+// module's suite.
 func TestResolveIPSetParityWithTailIPAM(t *testing.T) {
 	t.Parallel()
 
