@@ -140,7 +140,7 @@ jobs:
           ref: ${{ inputs.repair_tag != '' && inputs.repair_tag || needs.release-please.outputs.tag_name }}
 
       - name: Install pinned tools
-        uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5
+        uses: jdx/mise-action@236a21c3b91f5db6d4e174b348674a0f0caac06d # v5
 
       - name: Build artifacts with goreleaser
         run: goreleaser release --clean --skip=publish
