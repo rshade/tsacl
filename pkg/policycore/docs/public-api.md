@@ -92,7 +92,7 @@ library.
 `hujsonedit` provides schema-agnostic, comment-preserving RFC 6902 edits to
 HuJSON documents. It carries no knowledge of any particular document's
 fields — callers own that; the package owns only the AST/patch mechanics.
-Extracted from `tsacl/internal/aclpolicy` once `tail-ipam` needed the same
+Extracted from `tsacl/internal/aclpolicy` once `tsipam` needed the same
 mechanics and the generic layer was already visibly separable from
 ACL-specific code.
 

@@ -1,5 +1,5 @@
 // Package ipcalc provides policy-agnostic subnet arithmetic. It knows nothing
-// about tail-ipam's registry, CLI, or Tailscale-specific concepts.
+// about tsipam's registry, CLI, or Tailscale-specific concepts.
 package ipcalc
 
 import (

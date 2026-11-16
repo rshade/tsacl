@@ -27,7 +27,7 @@ repeated site ID is intentional; callers own those classifications.
 
 The `hujsonedit` subpackage applies schema-agnostic, comment-preserving RFC
 6902 edits to HuJSON documents. It carries no knowledge of any particular
-document's fields; `tsacl` and `tail-ipam` both build their typed edits on
+document's fields; `tsacl` and `tsipam` both build their typed edits on
 it.
 
 The `posture` subpackage parses, validates, and evaluates Tailscale

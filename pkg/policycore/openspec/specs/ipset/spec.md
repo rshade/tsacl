@@ -112,13 +112,13 @@ exactly as it withdraws any other contributed address.
   `ResolveIPSet("ipset:readded", policy)` is called
 - **THEN** it returns exactly `[198.51.100.2/31]`
 
-#### Scenario: The shared fixture resolves as tail-ipam resolves it
+#### Scenario: The shared fixture resolves as tsipam resolves it
 
-- **WHEN** the `operations` policy fixture `tail-ipam`'s `check-policy`
+- **WHEN** the `operations` policy fixture `tsipam`'s `check-policy`
   tests commit is resolved set by set
 - **THEN** `ipset:base` covers exactly `192.0.2.0/24`, `ipset:trimmed`
   exactly `192.0.2.0/25`, `ipset:empty` nothing, and `ipset:readded` exactly
-  `198.51.100.2/31` — the address spaces `tail-ipam`'s golden report records
+  `198.51.100.2/31` — the address spaces `tsipam`'s golden report records
 
 ### Requirement: An ipset that cannot be materialized is an error, never a partial set
 
