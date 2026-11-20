@@ -6,6 +6,9 @@ import (
 
 	"go4.org/netipx"
 	tailscale "tailscale.com/client/tailscale/v2"
+
+	"github.com/rshade/tsacl/pkg/policycore/errcode"
+	"github.com/rshade/tsacl/pkg/policycore/internal/coded"
 )
 
 // These bound expansion work, not address-space size: an IPv6 /0 is one
@@ -14,11 +17,6 @@ import (
 const (
 	maxIPSetDepth    = 128
 	maxIPSetPrefixes = 65536
-)
-
-var (
-	errIPSetDepth    = fmt.Errorf("ipset nesting exceeds %d levels", maxIPSetDepth)
-	errIPSetPrefixes = fmt.Errorf("ipset expansion exceeds %d prefixes", maxIPSetPrefixes)
 )
 
 // ResolveIPSet materializes one IPSets entry into the address space its
@@ -41,7 +39,7 @@ var (
 // a failed remove, silently widen the set.
 func ResolveIPSet(name string, policy *tailscale.ACL) ([]netip.Prefix, error) {
 	if policy == nil {
-		return nil, fmt.Errorf("%s is not a defined ipset", name)
+		return nil, coded.Errorf(errcode.IPSetUndefined, "%s is not a defined ipset", name)
 	}
 	r := ipsetResolver{
 		policy:  policy,
@@ -49,7 +47,18 @@ func ResolveIPSet(name string, policy *tailscale.ACL) ([]netip.Prefix, error) {
 		heights: make(map[string]int),
 		active:  make(map[string]bool),
 	}
-	return r.resolve(name, 0)
+	prefixes, err := r.resolve(name, 0)
+	if err != nil {
+		return nil, coded.Boundary(err)
+	}
+	return prefixes, nil
+}
+
+// errIPSetDepth is built per failure rather than shared: a contract error
+// carries its own envelope fields, and a package-level value would be one
+// mutable envelope handed to every caller.
+func errIPSetDepth() error {
+	return coded.Errorf(errcode.IPSetDepthExceeded, "ipset nesting exceeds %d levels", maxIPSetDepth)
 }
 
 // ipsetResolver holds one ResolveIPSet call's state. memo serves a set
@@ -67,20 +76,20 @@ type ipsetResolver struct {
 
 func (r *ipsetResolver) resolve(name string, depth int) ([]netip.Prefix, error) {
 	if r.active[name] {
-		return nil, fmt.Errorf("%s is a cyclic ipset reference", name)
+		return nil, coded.Errorf(errcode.IPSetCycle, "%s is a cyclic ipset reference", name)
 	}
 	if depth >= maxIPSetDepth {
-		return nil, errIPSetDepth
+		return nil, errIPSetDepth()
 	}
 	if resolved, ok := r.memo[name]; ok {
 		if depth+r.heights[name] > maxIPSetDepth {
-			return nil, errIPSetDepth
+			return nil, errIPSetDepth()
 		}
 		return resolved, nil
 	}
 	members, ok := r.policy.IPSets[name]
 	if !ok {
-		return nil, fmt.Errorf("%s is not a defined ipset", name)
+		return nil, coded.Errorf(errcode.IPSetUndefined, "%s is not a defined ipset", name)
 	}
 	// The control plane rejects the mixed shape outright, so materializing
 	// it would answer for a policy no tailnet can hold.
@@ -99,12 +108,13 @@ func (r *ipsetResolver) resolve(name string, depth int) ([]netip.Prefix, error) 
 	}
 	set, err := builder.IPSet()
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", name, err)
+		return nil, coded.Errorf(errcode.IPSetMemberInvalid, "%s: %w", name, err)
 	}
 	prefixes := set.Prefixes()
 	r.prefixCount += len(prefixes)
 	if r.prefixCount > maxIPSetPrefixes {
-		return nil, fmt.Errorf("%s: %w", name, errIPSetPrefixes)
+		return nil, coded.Errorf(errcode.IPSetExpansionExceeded,
+			"%s: ipset expansion exceeds %d prefixes", name, maxIPSetPrefixes)
 	}
 	r.memo[name] = prefixes
 	return prefixes, nil
@@ -145,27 +155,29 @@ func (r *ipsetResolver) contribution(member IPSetMember, depth int) ([]netip.Pre
 		alias, _ := member.HostAlias()
 		value, ok := r.policy.Hosts[alias]
 		if !ok {
-			return nil, fmt.Errorf("%s is not a defined host", member.Target)
+			return nil, coded.Errorf(errcode.HostAliasUndefined, "%s is not a defined host", member.Target)
 		}
 		prefix, ok := literalPrefix(value)
 		if !ok {
-			return nil, fmt.Errorf("%s names %q, which is not an address or prefix", member.Target, value)
+			return nil, coded.Errorf(errcode.HostAliasNotAddress,
+				"%s names %q, which is not an address or prefix", member.Target, value)
 		}
 		return []netip.Prefix{prefix}, nil
 	case IPSetMemberRange:
 		ipRange, err := netipx.ParseIPRange(member.Target)
 		if err != nil {
-			return nil, fmt.Errorf("%s: %w", member.Target, err)
+			return nil, coded.Errorf(errcode.IPSetMemberInvalid, "%s: %w", member.Target, err)
 		}
 		return ipRange.Prefixes(), nil
 	case IPSetMemberPrefix:
 		prefix, ok := literalPrefix(member.Target)
 		if !ok {
-			return nil, fmt.Errorf("%s is not an address or prefix", member.Target)
+			return nil, coded.Errorf(errcode.IPSetMemberInvalid, "%s is not an address or prefix", member.Target)
 		}
 		return []netip.Prefix{prefix}, nil
 	default:
-		return nil, fmt.Errorf("%s has an unknown member kind %q", member.Target, member.Kind)
+		return nil, coded.Errorf(errcode.IPSetMemberInvalid,
+			"%s has an unknown member kind %q", member.Target, member.Kind)
 	}
 }
 

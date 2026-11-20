@@ -220,6 +220,11 @@
       "usage": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)"
     },
     {
+      "default": "16777216",
+      "name": "max-policy-bytes",
+      "usage": "largest policy, merge input, or lint config to read, in bytes (1 to 1073741824)"
+    },
+    {
       "default": "",
       "name": "oauth-client-id",
       "usage": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)"

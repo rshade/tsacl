@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -14,7 +15,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/rshade/tsacl/internal/aclpolicy"
 	"github.com/rshade/tsacl/internal/tailapi"
+	"github.com/rshade/tsacl/pkg/policycore/hujsonedit"
 )
 
 func TestCompositeTestResultTruthTable(t *testing.T) {
@@ -291,7 +294,7 @@ func TestStablePolicyPollerGatesRewritesAndQuietPeriod(t *testing.T) {
 	writeTestPolicy(t, path, watchPassingPolicy)
 	logger := newLogger(io.Discard, false, nil)
 	ctx := context.Background()
-	poller := newStablePolicyPoller(path, []byte(watchPassingPolicy))
+	poller := newStablePolicyPoller(aclpolicy.Files{}, path, []byte(watchPassingPolicy))
 
 	// Seeded from the startup read, so an already-stable file grades on tick 1.
 	if _, _, stable := poller.poll(ctx, logger); !stable {
@@ -322,7 +325,7 @@ func TestStablePolicyPollerWarnsOnceWhileUnreadable(t *testing.T) {
 	var stderr strings.Builder
 	logger := newLogger(&stderr, false, nil)
 	ctx := context.Background()
-	poller := newStablePolicyPoller(path, []byte(watchPassingPolicy))
+	poller := newStablePolicyPoller(aclpolicy.Files{}, path, []byte(watchPassingPolicy))
 	for range 3 {
 		if _, _, stable := poller.poll(ctx, logger); stable {
 			t.Fatal("unreadable file reported a stable snapshot")
@@ -330,6 +333,27 @@ func TestStablePolicyPollerWarnsOnceWhileUnreadable(t *testing.T) {
 	}
 	if got := strings.Count(stderr.String(), "cannot read policy file"); got != 1 {
 		t.Fatalf("warned %d times while unreadable, want 1", got)
+	}
+}
+
+// A watched file that grows past --max-policy-bytes is one more unreadable
+// poll: the watch warns and keeps running rather than exiting mid-session.
+func TestStablePolicyPollerSkipsAnOversizeSnapshot(t *testing.T) {
+	t.Parallel()
+	path := filepath.Join(t.TempDir(), "acl.hujson")
+	writeTestPolicy(t, path, watchPassingPolicy+strings.Repeat(" ", 64))
+	var stderr strings.Builder
+	logger := slog.New(slog.NewTextHandler(&stderr, nil))
+	ctx := context.Background()
+	files := aclpolicy.Files{Limits: hujsonedit.Options{MaxBytes: int64(len(watchPassingPolicy))}}
+	poller := newStablePolicyPoller(files, path, []byte(watchPassingPolicy))
+	for range 2 {
+		if _, _, stable := poller.poll(ctx, logger); stable {
+			t.Fatal("oversize file reported a stable snapshot")
+		}
+	}
+	if got := strings.Count(stderr.String(), "config exceeds maximum size"); got != 1 {
+		t.Fatalf("warned %d times about the oversize file, want 1:\n%s", got, &stderr)
 	}
 }
 

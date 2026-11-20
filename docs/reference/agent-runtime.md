@@ -37,6 +37,28 @@ The exit code is the one documented in [Exit codes](exit-codes.md). The
 | `indeterminate` | 10 | The question cannot be settled from the evidence |
 | `command_failed` | 1 | The operation, an assertion, or a gate failed |
 
+When an input error comes from the shared `policycore` library, its own code
+replaces `validation_error` or `command_failed`, and the line carries the
+library's `actionable_fix` and `"retryable": false`. Every one exits `2`:
+
+| `error_code` | Meaning |
+| --- | --- |
+| `config_invalid` | A policy, merge input, or lint config is not valid HuJSON; the message keeps hujson's line and column |
+| `config_too_large` | The file exceeds `--max-policy-bytes` (default 16 MiB) |
+| `config_max_bytes_invalid` | `--max-policy-bytes` is outside 1 through 1073741824 |
+| `config_patch_invalid` | An edit cannot apply to the document |
+| `comment_invalid` | `--comment` text is empty, multi-line, or invalid UTF-8 |
+| `ipset_member_invalid` | An ipset member does not parse |
+| `ipset_operation_ambiguous` | A member with no operation word sits beside a `remove` |
+| `roster_invalid`, `roster_entry_invalid` | The `--roster` file, or one of its entries, is malformed |
+| `external_selector_invalid` | A `group://` or `tag://` selector is malformed |
+
+The [policycore error contract](../../pkg/policycore/docs/public-api.md#error-contract)
+lists every code. The `message` is always `tsacl`'s own text, prefix
+included, and under `--sanitize` it is the sanitized text; `context` and
+`suggestions` are never taken from the library error. An indeterminate answer
+still exits `10` even when a library error is part of its cause.
+
 A failing verdict (`check` not reachable, a failed `test`, `lint` findings)
 still prints its result envelope on stdout; stderr adds the error line. Parse
 stdout for the verdict and stderr for the failure class.
@@ -115,6 +137,13 @@ example `tsacl-check` and `tsacl-grant-add`.
 ## Upgrading
 
 - Scripts that read stderr text must parse the JSON line instead.
+- A policy, merge input, or lint config that is not valid HuJSON now exits `2`
+  with `config_invalid` on every command; edit commands and `merge` used to
+  exit `1` with `command_failed`.
+- Input errors that already exited `2` with `validation_error` may now carry a
+  specific code such as `ipset_member_invalid` or `roster_entry_invalid`.
+- A policy over 16 MiB fails with `config_too_large` unless
+  `--max-policy-bytes` raises the limit.
 - Scripts that run `--format json upload` must add `--yes`.
 - Anything that relied on `--format` defaulting to `human` in its `-schema`
   output sees an empty default; the behavior is the same.

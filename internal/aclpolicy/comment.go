@@ -30,5 +30,10 @@ func ValidateCommentText(text string) error {
 // style still resolves — see hujsonedit.LeadingComments for the rest of the
 // contract.
 func LeadingComments(path string, segments ...string) ([]string, error) {
-	return hujsonedit.LeadingComments(path, resolveTopLevelKey, segments...)
+	return Files{}.LeadingComments(path, segments...)
+}
+
+// LeadingComments is the package-level LeadingComments under f's read limit.
+func (f Files) LeadingComments(path string, segments ...string) ([]string, error) {
+	return f.Limits.LeadingComments(path, resolveTopLevelKey, segments...)
 }

@@ -4,6 +4,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/rshade/tsacl/internal/aclpolicy"
 )
 
 func TestNodeAttrCommandsMergeRemoveAndPreserveApp(t *testing.T) {
@@ -60,7 +62,7 @@ func TestNodeAttrCommandsMergeRemoveAndPreserveApp(t *testing.T) {
 		"--attr", "funnel"); err != nil {
 		t.Fatal(err)
 	}
-	policy, err := loadForEdit(path)
+	policy, err := loadForEdit(aclpolicy.Files{}, path)
 	if err != nil {
 		t.Fatal(err)
 	}

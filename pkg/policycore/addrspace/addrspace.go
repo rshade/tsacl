@@ -11,6 +11,9 @@ import (
 	"net/netip"
 	"slices"
 	"strings"
+
+	"github.com/rshade/tsacl/pkg/policycore/errcode"
+	"github.com/rshade/tsacl/pkg/policycore/internal/coded"
 )
 
 // v4In6PrefixBits is the length of the IPv4-mapped IPv6 prefix, subtracted to
@@ -26,11 +29,11 @@ const v4In6PrefixBits = 96
 func Overlaps(a, b string) (bool, error) {
 	prefixA, err := parseAddressOrPrefix(a)
 	if err != nil {
-		return false, fmt.Errorf("addrspace: %q: %w", a, err)
+		return false, coded.Errorf(errcode.AddressInvalid, "addrspace: %q: %w", a, err)
 	}
 	prefixB, err := parseAddressOrPrefix(b)
 	if err != nil {
-		return false, fmt.Errorf("addrspace: %q: %w", b, err)
+		return false, coded.Errorf(errcode.AddressInvalid, "addrspace: %q: %w", b, err)
 	}
 	return prefixesOverlap(prefixA, prefixB), nil
 }
@@ -52,7 +55,7 @@ func OverlappingPairs(cidrs []string) ([][2]int, map[int]error) {
 			if errs == nil {
 				errs = make(map[int]error)
 			}
-			errs[index] = fmt.Errorf("addrspace: %q: %w", cidr, err)
+			errs[index] = coded.Errorf(errcode.AddressInvalid, "addrspace: %q: %w", cidr, err)
 			continue
 		}
 		projections = append(projections, prefixProjection{prefix: prefix, index: index})

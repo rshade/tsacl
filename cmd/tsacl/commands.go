@@ -152,7 +152,7 @@ func newNodeAttrAddCommand(deps *commandDeps) *cobra.Command {
 		Short: "Add attributes or IP pools to a target set; target order is ignored and matching entries are merged",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			out, err := runNodeAttrAdd(deps.opts.file, flags.spec(), flags.comment,
+			out, err := runNodeAttrAdd(deps.opts.policyFiles(), deps.opts.file, flags.spec(), flags.comment,
 				cmd.Flags().Changed(commentFlagName), flags.overwriteComment)
 			*deps.result = out
 			return err
@@ -169,23 +169,42 @@ func newNodeAttrRemoveCommand(deps *commandDeps) *cobra.Command {
 		Use:   subRemove,
 		Short: "Remove node attributes or IP pools by target set, or one entry by --index",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			if cmd.Flags().Changed("index") {
-				if flags.changed(cmd) {
-					return usagef("nodeattr remove --index cannot be combined with node attribute fields")
-				}
-				out, err := runNodeAttrRemoveAt(deps.opts.file, index)
-				*deps.result = out
-				return err
-			}
-			out, err := runNodeAttrRemove(deps.opts.file, flags.spec())
-			*deps.result = out
-			return err
-		},
+		RunE: indexedRemoveRunE(deps, &index, flags.changed,
+			"nodeattr remove --index cannot be combined with node attribute fields",
+			runNodeAttrRemoveAt,
+			func(files aclpolicy.Files, path string) (*result, error) {
+				return runNodeAttrRemove(files, path, flags.spec())
+			}),
 	}
 	registerNodeAttrFlags(cmd, &flags, false)
 	cmd.Flags().IntVar(&index, "index", -1, "remove the nodeAttrs entry at this zero-based index")
 	return cmd
+}
+
+// indexedRemoveRunE builds the RunE shared by the remove commands that take
+// either --index or the fields identifying one entry, never both.
+func indexedRemoveRunE(
+	deps *commandDeps,
+	index *int,
+	fieldsChanged func(*cobra.Command) bool,
+	conflict string,
+	removeAt func(aclpolicy.Files, string, int) (*result, error),
+	removeMatching func(aclpolicy.Files, string) (*result, error),
+) func(*cobra.Command, []string) error {
+	return func(cmd *cobra.Command, _ []string) error {
+		var out *result
+		var err error
+		switch {
+		case !cmd.Flags().Changed("index"):
+			out, err = removeMatching(deps.opts.policyFiles(), deps.opts.file)
+		case fieldsChanged(cmd):
+			return usagef("%s", conflict)
+		default:
+			out, err = removeAt(deps.opts.policyFiles(), deps.opts.file, *index)
+		}
+		*deps.result = out
+		return err
+	}
 }
 
 type nodeAttrFlags struct {
@@ -220,7 +239,7 @@ func newSSHAddCommand(deps *commandDeps) *cobra.Command {
 		Short: "Add an SSH rule; selector order is ignored, duplicate rules are a no-op, and check without a period differs from check with one",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			out, err := runSSHAdd(deps.opts.file, spec.spec(), spec.comment,
+			out, err := runSSHAdd(deps.opts.policyFiles(), deps.opts.file, spec.spec(), spec.comment,
 				cmd.Flags().Changed(commentFlagName), spec.overwriteComment)
 			*deps.result = out
 			return err
@@ -237,19 +256,12 @@ func newSSHRemoveCommand(deps *commandDeps) *cobra.Command {
 		Use:   subRemove,
 		Short: "Remove an SSH rule by semantic identity or --index",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			if cmd.Flags().Changed("index") {
-				if spec.changed(cmd) {
-					return usagef("ssh remove --index cannot be combined with SSH rule fields")
-				}
-				out, err := runSSHRemoveAt(deps.opts.file, index)
-				*deps.result = out
-				return err
-			}
-			out, err := runSSHRemove(deps.opts.file, spec.spec())
-			*deps.result = out
-			return err
-		},
+		RunE: indexedRemoveRunE(deps, &index, spec.changed,
+			"ssh remove --index cannot be combined with SSH rule fields",
+			runSSHRemoveAt,
+			func(files aclpolicy.Files, path string) (*result, error) {
+				return runSSHRemove(files, path, spec.spec())
+			}),
 	}
 	registerSSHRuleFlags(cmd, &spec, false)
 	cmd.Flags().IntVar(&index, "index", -1, "remove the SSH rule at this zero-based index")
@@ -307,7 +319,7 @@ func newDefinitionAddCommand(deps *commandDeps, kind aclpolicy.DefinitionKind) *
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			out, err := runDefinitionAdd(
-				deps.opts.file, kind, name, []string(members), comment,
+				deps.opts.policyFiles(), deps.opts.file, kind, name, []string(members), comment,
 				cmd.Flags().Changed(commentFlagName), overwriteComment,
 			)
 			*deps.result = out
@@ -334,7 +346,7 @@ func newIPSetAddCommand(deps *commandDeps) *cobra.Command {
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			out, err := runIPSetAdd(
-				deps.opts.file, name, members, comment,
+				deps.opts.policyFiles(), deps.opts.file, name, members, comment,
 				cmd.Flags().Changed(commentFlagName), overwriteComment,
 			)
 			*deps.result = out
@@ -388,7 +400,7 @@ func newDefinitionRemoveCommand(deps *commandDeps, kind aclpolicy.DefinitionKind
 		Short: "Remove a " + string(kind) + " definition",
 		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			out, err := runDefinitionRemove(deps.opts.file, kind, name, force)
+			out, err := runDefinitionRemove(deps.opts.policyFiles(), deps.opts.file, kind, name, force)
 			*deps.result = out
 			return err
 		},
@@ -405,7 +417,7 @@ func newNormalizeCommand(deps *commandDeps) *cobra.Command {
 		Short: "Emit the policy as standard JSON for general-purpose JSON tools",
 		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			out, err := runNormalize(deps.opts.file)
+			out, err := runNormalize(deps.opts.policyFiles(), deps.opts.file)
 			*deps.result = out
 			return err
 		},
@@ -473,7 +485,7 @@ func newGrantAddCommand(deps *commandDeps) *cobra.Command {
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			out, err := runGrantAdd(
-				deps.opts.file,
+				deps.opts.policyFiles(), deps.opts.file,
 				[]string(source), []string(destination), []string(ip), []string(srcPosture),
 				comment, cmd.Flags().Changed(commentFlagName), overwriteComment,
 			)
@@ -498,7 +510,7 @@ func newGrantRemoveCommand(deps *commandDeps) *cobra.Command {
 		Short: "Remove a grant by index",
 		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			out, err := runGrantRemove(deps.opts.file, index)
+			out, err := runGrantRemove(deps.opts.policyFiles(), deps.opts.file, index)
 			*deps.result = out
 			return err
 		},
@@ -525,7 +537,8 @@ func newTagOwnerAddCommand(deps *commandDeps) *cobra.Command {
 		Short: "Add an owner to a tag",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			out, err := runTagOwnerAdd(
-				deps.opts.file, args, comment, cmd.Flags().Changed(commentFlagName), overwriteComment,
+				deps.opts.policyFiles(), deps.opts.file, args, comment,
+				cmd.Flags().Changed(commentFlagName), overwriteComment,
 			)
 			*deps.result = out
 			return err
@@ -545,7 +558,8 @@ func newHostSetCommand(deps *commandDeps) *cobra.Command {
 		Short: "Set a host alias to an address",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			out, err := runHostSet(
-				deps.opts.file, args, comment, cmd.Flags().Changed(commentFlagName), overwriteComment,
+				deps.opts.policyFiles(), deps.opts.file, args, comment,
+				cmd.Flags().Changed(commentFlagName), overwriteComment,
 			)
 			*deps.result = out
 			return err
@@ -565,7 +579,8 @@ func newPostureSetCommand(deps *commandDeps) *cobra.Command {
 		Short: "Add or replace a posture's expression list",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			out, err := runPostureSet(
-				deps.opts.file, args, comment, cmd.Flags().Changed(commentFlagName), overwriteComment,
+				deps.opts.policyFiles(), deps.opts.file, args, comment,
+				cmd.Flags().Changed(commentFlagName), overwriteComment,
 				cmd.ErrOrStderr(),
 			)
 			*deps.result = out
@@ -581,7 +596,7 @@ func newPostureRemoveCommand(deps *commandDeps) *cobra.Command {
 		Use:   subRemove + " NAME",
 		Short: "Remove a posture definition",
 		RunE: func(_ *cobra.Command, args []string) error {
-			out, err := runPostureRemove(deps.opts.file, args)
+			out, err := runPostureRemove(deps.opts.policyFiles(), deps.opts.file, args)
 			*deps.result = out
 			return err
 		},
@@ -604,7 +619,7 @@ func newAutoApproverAddCommand(deps *commandDeps) *cobra.Command {
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			out, err := runAutoApproverAdd(
-				deps.opts.file, route, exitNode, []string(approvers),
+				deps.opts.policyFiles(), deps.opts.file, route, exitNode, []string(approvers),
 				comment, cmd.Flags().Changed(commentFlagName), overwriteComment,
 			)
 			*deps.result = out
@@ -629,7 +644,9 @@ func newAutoApproverRemoveCommand(deps *commandDeps) *cobra.Command {
 		Short: "Remove auto-approvers, pruning an emptied route key",
 		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			out, err := runAutoApproverRemove(deps.opts.file, route, exitNode, []string(approvers))
+			out, err := runAutoApproverRemove(
+				deps.opts.policyFiles(), deps.opts.file, route, exitNode, []string(approvers),
+			)
 			*deps.result = out
 			return err
 		},
@@ -660,12 +677,12 @@ func newMergeCommand(deps *commandDeps) *cobra.Command {
 			}
 			return ax.PerformWithAudit(cmd.Context(), cmd.CommandPath(),
 				func(context.Context) error {
-					out, err := rehearseMerge(request)
+					out, err := rehearseMerge(deps.opts.policyFiles(), request)
 					*deps.result = out
 					return err
 				},
 				func(context.Context) error {
-					out, err := runMerge(request)
+					out, err := runMerge(deps.opts.policyFiles(), request)
 					*deps.result = out
 					return err
 				},
@@ -744,7 +761,9 @@ func newTestCommand(deps *commandDeps) *cobra.Command {
 	return cmd
 }
 
-type testEditFunc func(file, source string, deny, accept, postureAttrs []string, stderr io.Writer) (*result, error)
+type testEditFunc func(
+	files aclpolicy.Files, file, source string, deny, accept, postureAttrs []string, stderr io.Writer,
+) (*result, error)
 
 func newTestAddCommand(deps *commandDeps) *cobra.Command {
 	return newTestEditCommand(deps, subAdd,
@@ -769,6 +788,7 @@ func newTestEditCommand(deps *commandDeps, use, short, postureUsage string, edit
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			out, err := edit(
+				deps.opts.policyFiles(),
 				deps.opts.file, source, []string(deny), []string(accept),
 				[]string(postureAttrFlags), cmd.ErrOrStderr(),
 			)

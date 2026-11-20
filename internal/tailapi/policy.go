@@ -10,15 +10,13 @@ import (
 	"net/url"
 	"strings"
 
-	diff "github.com/hexops/gotextdiff"
-	"github.com/hexops/gotextdiff/myers"
-	"github.com/hexops/gotextdiff/span"
 	"github.com/tailscale/hujson"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
 	tailscale "tailscale.com/client/tailscale/v2"
 
 	"github.com/rshade/tsacl/internal/aclpolicy"
+	"github.com/rshade/tsacl/internal/policydiff"
 )
 
 const DefaultBaseURL = "https://api.tailscale.com"
@@ -256,16 +254,18 @@ func (a oauthAuth) HTTPClient(orig *http.Client, baseURL string) *http.Client {
 	}
 }
 
-// UploadFile validates path as HuJSON and sets it as the tailnet policy. The v2
+// UploadFile reads path under files' limit, validates it as HuJSON, and sets
+// it as the tailnet policy. The v2
 // client's raw-HuJSON Set method intentionally returns only an error, so a
 // request-local transport wrapper captures the successful response ETag
 // without a racy second fetch or any mutation of the caller's HTTP client.
 func UploadFile(
 	ctx context.Context,
 	client *tailscale.Client,
+	files aclpolicy.Files,
 	path, ifMatch string,
 ) (UploadedPolicy, error) {
-	raw, err := aclpolicy.ReadRaw(path)
+	raw, err := files.ReadRaw(path)
 	if err != nil {
 		return UploadedPolicy{}, err
 	}
@@ -352,9 +352,15 @@ func LookupService(
 	}
 }
 
-// ValidateFile asks Tailscale to validate the policy and run its policy tests.
-func ValidateFile(ctx context.Context, client *tailscale.Client, path string) (ValidationResult, error) {
-	raw, err := aclpolicy.ReadRaw(path)
+// ValidateFile reads path under files' limit and asks Tailscale to validate the
+// policy and run its policy tests.
+func ValidateFile(
+	ctx context.Context,
+	client *tailscale.Client,
+	files aclpolicy.Files,
+	path string,
+) (ValidationResult, error) {
+	raw, err := files.ReadRaw(path)
 	if err != nil {
 		return newValidationResult(), err
 	}
@@ -376,8 +382,8 @@ func ValidateFile(ctx context.Context, client *tailscale.Client, path string) (V
 // changes" for a candidate that was never diffed. Validation verdicts wrap
 // [ValidationError] or [ValidationIndeterminateError]; every failure before
 // validation returns a nil *Plan.
-func PlanFile(ctx context.Context, client *tailscale.Client, path string) (*Plan, error) {
-	candidate, err := aclpolicy.ReadRaw(path)
+func PlanFile(ctx context.Context, client *tailscale.Client, files aclpolicy.Files, path string) (*Plan, error) {
+	candidate, err := files.ReadRaw(path)
 	if err != nil {
 		return nil, err
 	}
@@ -403,13 +409,11 @@ func PlanFile(ctx context.Context, client *tailscale.Client, path string) (*Plan
 		return &Plan{Validation: validation}, fmt.Errorf("formatting %s: %w", path, err)
 	}
 
-	before := string(deployedFormatted)
-	edits := myers.ComputeEdits(span.URIFromPath(path), before, string(candidateFormatted))
-	unified := diff.ToUnified("deployed", path, before, edits)
+	diff := policydiff.Unified("deployed", deployedFormatted, path, candidateFormatted)
 	return &Plan{
-		Diff:       fmt.Sprint(unified),
+		Diff:       diff,
 		ETag:       deployed.ETag,
-		Changed:    len(edits) != 0,
+		Changed:    diff != "",
 		Validation: validation,
 	}, nil
 }

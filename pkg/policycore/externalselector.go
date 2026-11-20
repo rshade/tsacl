@@ -1,9 +1,11 @@
 package policycore
 
 import (
-	"fmt"
 	"strings"
 	"unicode"
+
+	"github.com/rshade/tsacl/pkg/policycore/errcode"
+	"github.com/rshade/tsacl/pkg/policycore/internal/coded"
 )
 
 // The cross-tailnet scheme prefixes. LooksLikeExternalSelector and
@@ -55,7 +57,8 @@ func LooksLikeExternalSelector(selector string) bool {
 // local and cross-tailnet references.
 func ParseExternalSelector(selector string) (ExternalSelector, error) {
 	if strings.TrimSpace(selector) != selector {
-		return ExternalSelector{}, fmt.Errorf("external selector %q contains surrounding whitespace", selector)
+		return ExternalSelector{}, coded.Errorf(errcode.ExternalSelectorInvalid,
+			"external selector %q contains surrounding whitespace", selector)
 	}
 
 	var (
@@ -70,7 +73,7 @@ func ParseExternalSelector(selector string) (ExternalSelector, error) {
 		kind = ExternalSelectorTag
 		remainder = strings.TrimPrefix(selector, externalTagPrefix)
 	default:
-		return ExternalSelector{}, fmt.Errorf(
+		return ExternalSelector{}, coded.Errorf(errcode.ExternalSelectorInvalid,
 			"external selector %q must use %s or %s syntax",
 			selector, externalGroupPrefix, externalTagPrefix,
 		)
@@ -78,13 +81,15 @@ func ParseExternalSelector(selector string) (ExternalSelector, error) {
 
 	alias, name, found := strings.Cut(remainder, "/")
 	if strings.TrimSpace(alias) == "" {
-		return ExternalSelector{}, fmt.Errorf("external selector %q: alias is required", selector)
+		return ExternalSelector{}, coded.Errorf(errcode.ExternalSelectorInvalid,
+			"external selector %q: alias is required", selector)
 	}
 	if !found || strings.TrimSpace(name) == "" {
-		return ExternalSelector{}, fmt.Errorf("external selector %q: name is required", selector)
+		return ExternalSelector{}, coded.Errorf(errcode.ExternalSelectorInvalid,
+			"external selector %q: name is required", selector)
 	}
 	if strings.Contains(name, "/") {
-		return ExternalSelector{}, fmt.Errorf(
+		return ExternalSelector{}, coded.Errorf(errcode.ExternalSelectorInvalid,
 			"external selector %q must contain exactly one alias and one name", selector,
 		)
 	}
@@ -101,7 +106,7 @@ func ParseExternalSelector(selector string) (ExternalSelector, error) {
 	// than an exotic one. The loop keeps the message written once.
 	for _, prefix := range []string{"group:", "tag:"} {
 		if strings.HasPrefix(name, prefix) {
-			return ExternalSelector{}, fmt.Errorf(
+			return ExternalSelector{}, coded.Errorf(errcode.ExternalSelectorInvalid,
 				"external selector %q: name must omit the %s prefix, which the selector kind already carries",
 				selector, prefix,
 			)
@@ -121,7 +126,7 @@ func validateToken(selector, label, token string) error {
 	if strings.ContainsFunc(token, func(r rune) bool {
 		return unicode.IsSpace(r) || !unicode.IsPrint(r)
 	}) {
-		return fmt.Errorf(
+		return coded.Errorf(errcode.ExternalSelectorInvalid,
 			"external selector %q: %s contains whitespace or a non-printable character",
 			selector, label,
 		)

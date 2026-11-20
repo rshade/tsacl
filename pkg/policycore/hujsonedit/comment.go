@@ -10,6 +10,9 @@ import (
 	"unicode/utf8"
 
 	"github.com/tailscale/hujson"
+
+	"github.com/rshade/tsacl/pkg/policycore/errcode"
+	"github.com/rshade/tsacl/pkg/policycore/internal/coded"
 )
 
 // commentPrefix is the marker the caller supplies; callers pass only the body.
@@ -26,13 +29,14 @@ const commentPrefix = "// "
 // that then no longer loads.
 func ValidateCommentText(text string) error {
 	if strings.TrimSpace(text) == "" {
-		return errors.New("comment text must not be empty")
+		return coded.New(errcode.CommentInvalid, errors.New("comment text must not be empty"))
 	}
 	if strings.ContainsAny(text, "\r\n") {
-		return errors.New("comment text must be one line: it must not contain a carriage return or newline")
+		return coded.New(errcode.CommentInvalid,
+			errors.New("comment text must be one line: it must not contain a carriage return or newline"))
 	}
 	if !utf8.ValidString(text) {
-		return errors.New("comment text must be valid UTF-8")
+		return coded.New(errcode.CommentInvalid, errors.New("comment text must be valid UTF-8"))
 	}
 	return nil
 }
@@ -77,7 +81,12 @@ func PatchCommentOverwrite(text string, segments ...string) PatchOperation {
 // WritePatch applies, or a command reports a change for a write that changed
 // nothing.
 func LeadingComments(path string, resolve ResolveKey, segments ...string) ([]string, error) {
-	document, err := ParseFile(path)
+	return Options{}.LeadingComments(path, resolve, segments...)
+}
+
+// LeadingComments is the package-level LeadingComments with o's read limit.
+func (o Options) LeadingComments(path string, resolve ResolveKey, segments ...string) ([]string, error) {
+	document, err := o.ParseFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +96,7 @@ func LeadingComments(path string, resolve ResolveKey, segments ...string) ([]str
 	}
 	extra, found, err := leadingExtra(&document, resolved)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", path, err)
+		return nil, coded.Boundary(fmt.Errorf("%s: %w", path, err))
 	}
 	if !found {
 		return nil, nil
@@ -125,7 +134,8 @@ func leadingExtra(document *hujson.Value, segments []string) (*hujson.Extra, boo
 		case *hujson.Array:
 			index, err := elementIndex(container, segment)
 			if err != nil {
-				return nil, false, fmt.Errorf("%s: %w", JSONPointer(segments[:i+1]...), err)
+				return nil, false, coded.Errorf(errcode.ConfigPatchInvalid,
+					"%s: %w", JSONPointer(segments[:i+1]...), err)
 			}
 			if index < 0 {
 				return nil, false, nil
@@ -135,7 +145,8 @@ func leadingExtra(document *hujson.Value, segments []string) (*hujson.Extra, boo
 			}
 			node = &container.Elements[index]
 		default:
-			return nil, false, fmt.Errorf("cannot index into a literal at %s", JSONPointer(segments[:i+1]...))
+			return nil, false, coded.Errorf(errcode.ConfigPatchInvalid,
+				"cannot index into a literal at %s", JSONPointer(segments[:i+1]...))
 		}
 	}
 	return nil, false, nil

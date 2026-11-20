@@ -353,7 +353,10 @@ diffable against each other.
 `-format human|json` (unset by default; `AGENT_MODE` selects JSON),
 `--dry-run` (preview any write), `--yes` (approve a JSON-mode `upload`),
 `--idempotency-key`, `--sanitize off|identity|strict`, `-verbose`, `--version`, `-schema`,
-`--color auto|always|never` (colorize human output, default `auto`).
+`--color auto|always|never` (colorize human output, default `auto`),
+`--max-policy-bytes N` (the largest policy, merge input, or lint config read,
+default `16777216` (16 MiB); a larger file fails with `config_too_large` and exit `2`
+before it is parsed; `--roster` is not bounded).
 `TAILSCALE_API_URL` overrides the API base URL (used by tests).
 
 ### Output sanitization
@@ -442,8 +445,9 @@ to stderr, `--dry-run` previews writes, a JSON-mode `upload` needs `--yes`, and
   indeterminate under `--indeterminate=fail`); `check` reports not reachable;
   `lint` found issues at
   or above the threshold
-- `2` usage, input, or collection error, including an absent or unreadable
-  upload observation with no explicit override. For `pull`, `validate`, and
+- `2` usage, input, or collection error, including a policy, merge input, or
+  lint config that is not valid HuJSON or exceeds `--max-policy-bytes`, and an
+  absent or unreadable upload observation with no explicit override. For `pull`, `validate`, and
   `plan` this also
   covers a control plane that never judged the policy — expired credentials,
   rate limiting, a server fault, an unreadable response body, a redirect that

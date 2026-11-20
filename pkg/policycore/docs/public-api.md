@@ -3,7 +3,73 @@
 This page describes the exported selector-matching API and ipset member
 grammar in `policycore`, the shared `policycore/addrspace` address primitives,
 the `policycore/sanitize` output contract, and the `policycore/hujsonedit`
-comment-preserving document editor, plus the cross-tailnet selector grammar.
+comment-preserving document editor, plus the cross-tailnet selector grammar
+and the error contract they share.
+
+## Error contract
+
+Every error a `policycore` API returns because its input was invalid unwraps
+to an ax-go [`*contract.Error`](https://pkg.go.dev/github.com/rshade/ax-go/contract#Error).
+Branch on its `ErrorCode` rather than on the message:
+
+```go
+var envelope *contract.Error
+if errors.As(err, &envelope) && envelope.ErrorCode == errcode.IPSetUndefined {
+    // ...
+}
+```
+
+Every such error has:
+
+- an `ErrorCode` from the closed vocabulary in `policycore/errcode`, which
+  `errcode.All()` lists
+- an `ActionableFix`, one fixed sentence per code (`errcode.Fix(code)`) that
+  never repeats input, so it cannot carry an identity or a policy value
+- `Retryable` set to `false`, because the same input fails the same way
+- `ExitCode()` equal to 2, the "input failed" code
+- empty `TraceID`, `Tool`, and `Version`, so `ax.Execute` stamps the live
+  values when a CLI returns the error
+- no `Context` and no `Suggestions`
+- an `Error()` text identical to the text the same input produced before
+  errors were typed, with every prefix a `policycore` API adds when it wraps
+  a nested failure; `Message` equals that text
+
+The original error stays in the chain, so `errors.As` and `errors.Is` still
+reach every type and sentinel that was there before. A type assertion on the
+returned error no longer does: write
+`errors.As(err, &implicit)` rather than `err.(*IPSetImplicitMemberError)`.
+
+| Code | Returned by | Meaning |
+| --- | --- | --- |
+| `ipset_member_invalid` | `ParseIPSetMember`, `ResolveIPSet` | A member does not parse under the ipset grammar |
+| `ipset_operation_ambiguous` | `ValidateIPSetOperations`, `ResolveIPSet` | An implicit member sits beside a `remove` |
+| `ipset_undefined` | `ResolveIPSet` | An `ipset:` reference names no defined set |
+| `ipset_cycle` | `ResolveIPSet` | An `ipset:` reference is already on the resolution path |
+| `ipset_depth_exceeded` | `ResolveIPSet` | `ipset:` references nest deeper than 128 levels |
+| `ipset_expansion_exceeded` | `ResolveIPSet` | The resolution exceeds 65536 prefixes |
+| `host_alias_undefined` | `ResolveIPSet` | A `host:` alias is not in `Hosts` |
+| `host_alias_not_address` | `ResolveIPSet` | A `host:` alias's value is not a literal address or prefix |
+| `roster_invalid` | `ParseRoster` | The roster document does not decode |
+| `roster_entry_invalid` | `ParseRoster` | One entry has an empty login, a bad or unknown role, or a duplicate login |
+| `address_invalid` | `addrspace.Overlaps`, `addrspace.OverlappingPairs` | A value is neither an address nor a prefix |
+| `external_selector_invalid` | `ParseExternalSelector` | A cross-tailnet selector is malformed |
+| `comment_invalid` | `hujsonedit` | Comment text is empty, multi-line, or invalid UTF-8 |
+| `config_too_large` | `hujsonedit` | A file exceeds the read limit |
+| `config_max_bytes_invalid` | `hujsonedit` | The read limit is negative or above the ceiling |
+| `config_invalid` | `hujsonedit` | A document is not valid HuJSON |
+| `config_patch_invalid` | `hujsonedit` | An edit, prune, or path cannot apply to the document |
+
+The four `config_*` codes are ax-go's own, so `hujsonedit` and ax-go's
+`config` package report the same code and exit code for the same input.
+
+An error that bad input does not cause stays an ordinary error: a file that
+cannot be opened (`errors.Is(err, fs.ErrNotExist)` still holds for a missing
+one), an atomic-write failure, a patch value that cannot be encoded as JSON,
+and every `sanitize` configuration error.
+
+Non-test packages under `pkg/` import only ax-go's `contract` and `config`
+packages, never the root `ax` facade or its telemetry, logging, or MCP stack;
+a test runs `go list -deps` to keep it that way.
 
 ## Cross-tailnet selectors
 
@@ -121,6 +187,27 @@ writing. `hujsonedit.ValidateCommentText` rejects text that cannot render as
 one line comment (a carriage return, a newline, or invalid UTF-8).
 
 `hujsonedit.ParseFile` reads and parses a JSON or HuJSON document.
+
+Every file read is bounded. `ParseFile`, `WritePatch`, and `LeadingComments`
+accept a file of up to `hujsonedit.DefaultMaxBytes` (16 MiB) and fail a
+larger one with `config_too_large` before parsing it; a file over the limit is
+never rewritten. To set a different limit, call the same functions as methods
+of `hujsonedit.Options`:
+
+```go
+files := hujsonedit.Options{MaxBytes: 4 << 20}
+value, err := files.ParseFile(path)
+raw, err := files.ReadFile(path) // the bytes, unparsed, under the same limit
+```
+
+`MaxBytes` accepts 1 through `config.MaxBytesCeiling` (1 GiB); zero means the
+default, and any other value fails with `config_max_bytes_invalid` before the
+file is opened. `Options.ReadFile` exists so a caller that decodes a document
+itself bounds it exactly as `ParseFile` does, and `hujsonedit.Parse(name,
+data)` parses bytes already in hand with the same `config_invalid`
+classification and `<name>: <hujson error>` text as `ParseFile`. `PatchBytes`
+reads no file and is not bounded.
+
 `hujsonedit.WriteRaw` atomically writes raw bytes, preserving an existing
 file's permissions and defaulting new files to `0644`. `hujsonedit.JSONPointer`
 renders an RFC 6901 pointer for path segments, escaping `~` and `/` so a
@@ -255,8 +342,10 @@ has no policy.
 member list: once any member is a `remove`, every member must be an explicit
 `add` or `remove`. It classifies by the operation word alone, so a linter can
 report the rule even when a target does not parse. The
-`IPSetImplicitMemberError` it returns names the first implicit member and the
-first `remove`, and its message says to write the member as `add <member>`.
+`IPSetImplicitMemberError` it reports names the first implicit member and the
+first `remove`, and its message says to write the member as `add <member>`. It
+arrives wrapped in an `ipset_operation_ambiguous` error, so reach it with
+`errors.As`.
 
 ## ipset materialization
 

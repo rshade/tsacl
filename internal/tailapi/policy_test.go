@@ -16,6 +16,7 @@ import (
 
 	tailscale "tailscale.com/client/tailscale/v2"
 
+	"github.com/rshade/tsacl/internal/aclpolicy"
 	"github.com/rshade/tsacl/internal/tailapi"
 )
 
@@ -51,10 +52,10 @@ func TestUploadAndValidateFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err = tailapi.ValidateFile(context.Background(), client, path); err != nil {
+	if _, err = tailapi.ValidateFile(context.Background(), client, aclpolicy.Files{}, path); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = tailapi.UploadFile(context.Background(), client, path, `"etag"`); err != nil {
+	if _, err = tailapi.UploadFile(context.Background(), client, aclpolicy.Files{}, path, `"etag"`); err != nil {
 		t.Fatal(err)
 	}
 	want := []string{
@@ -266,7 +267,7 @@ func TestUploadFileReturnsResponseETagAndExactBytes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	uploaded, err := tailapi.UploadFile(context.Background(), client, path, `"etag-old"`)
+	uploaded, err := tailapi.UploadFile(context.Background(), client, aclpolicy.Files{}, path, `"etag-old"`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -356,7 +357,7 @@ func TestPlanFileReturnsValidatedUnifiedDiffAndETag(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	plan, err := tailapi.PlanFile(context.Background(), client, path)
+	plan, err := tailapi.PlanFile(context.Background(), client, aclpolicy.Files{}, path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -401,7 +402,7 @@ func TestPlanFileReportsNoChangesForMatchingPolicy(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	plan, err := tailapi.PlanFile(context.Background(), client, path)
+	plan, err := tailapi.PlanFile(context.Background(), client, aclpolicy.Files{}, path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -434,7 +435,7 @@ func TestPlanFileStopsOnValidationFailure(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	plan, err := tailapi.PlanFile(context.Background(), client, path)
+	plan, err := tailapi.PlanFile(context.Background(), client, aclpolicy.Files{}, path)
 	if err == nil || !strings.Contains(err.Error(), "test(s) failed") {
 		t.Fatalf("error = %v, want policy-test failure", err)
 	}

@@ -21,7 +21,7 @@ func newExternalTailnetAddCommand(deps *commandDeps) *cobra.Command {
 		Short: "Add an externalTailnets alias; repeating the same arguments is a no-op",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			out, err := runExternalTailnetAdd(
-				deps.opts.file, args, externalID, allowIncoming, allowRefs,
+				deps.opts.policyFiles(), deps.opts.file, args, externalID, allowIncoming, allowRefs,
 				comment, cmd.Flags().Changed(commentFlagName), overwriteComment,
 			)
 			*deps.result = out
@@ -44,7 +44,7 @@ func newExternalTailnetRemoveCommand(deps *commandDeps) *cobra.Command {
 		Use:   subRemove + " ALIAS",
 		Short: "Remove an externalTailnets alias; a referenced alias requires --force",
 		RunE: func(_ *cobra.Command, args []string) error {
-			out, err := runExternalTailnetRemove(deps.opts.file, args, force)
+			out, err := runExternalTailnetRemove(deps.opts.policyFiles(), deps.opts.file, args, force)
 			*deps.result = out
 			return err
 		},
@@ -59,7 +59,7 @@ func newExternalTailnetListCommand(deps *commandDeps) *cobra.Command {
 		Short: "List externalTailnets aliases",
 		Args:  cobra.NoArgs,
 		RunE: func(*cobra.Command, []string) error {
-			out, err := runExternalTailnetList(deps.opts.file)
+			out, err := runExternalTailnetList(deps.opts.policyFiles(), deps.opts.file)
 			*deps.result = out
 			return err
 		},
@@ -67,6 +67,7 @@ func newExternalTailnetListCommand(deps *commandDeps) *cobra.Command {
 }
 
 func runExternalTailnetAdd(
+	files aclpolicy.Files,
 	path string,
 	args []string,
 	externalID string,
@@ -82,7 +83,7 @@ func runExternalTailnetAdd(
 	if err != nil {
 		return nil, err
 	}
-	policy, err := loadForEdit(path)
+	policy, err := loadForEdit(files, path)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +101,7 @@ func runExternalTailnetAdd(
 		var commentOps []aclpolicy.PatchOperation
 		if edit.Existed {
 			commentOps, err = commentOperations(
-				path, comment, overwriteComment, externalTailnetsSection, edit.Alias,
+				files, path, comment, overwriteComment, externalTailnetsSection, edit.Alias,
 			)
 		} else {
 			commentOps = []aclpolicy.PatchOperation{
@@ -115,7 +116,7 @@ func runExternalTailnetAdd(
 	status := statusNoChanges
 	message := fmt.Sprintf("external tailnet %s already matches in %s", edit.Alias, path)
 	if len(operations) != 0 {
-		if err = aclpolicy.WritePatch(path, operations...); err != nil {
+		if err = files.WritePatch(path, operations...); err != nil {
 			return nil, err
 		}
 		status = statusOK
@@ -127,11 +128,11 @@ func runExternalTailnetAdd(
 	return res, nil
 }
 
-func runExternalTailnetRemove(path string, args []string, force bool) (*result, error) {
+func runExternalTailnetRemove(files aclpolicy.Files, path string, args []string, force bool) (*result, error) {
 	if len(args) != 1 {
 		return nil, usagef("usage: tsacl external-tailnet remove ALIAS")
 	}
-	policy, err := loadForEdit(path)
+	policy, err := loadForEdit(files, path)
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +146,7 @@ func runExternalTailnetRemove(path string, args []string, force bool) (*result, 
 	status := statusNoChanges
 	message := fmt.Sprintf("external tailnet %s not present in %s", edit.Alias, path)
 	if edit.Changed() {
-		if err = aclpolicy.WritePatch(path, edit.Operations...); err != nil {
+		if err = files.WritePatch(path, edit.Operations...); err != nil {
 			return nil, err
 		}
 		status = statusOK
@@ -157,8 +158,8 @@ func runExternalTailnetRemove(path string, args []string, force bool) (*result, 
 	return res, nil
 }
 
-func runExternalTailnetList(path string) (*result, error) {
-	policy, err := loadForEdit(path)
+func runExternalTailnetList(files aclpolicy.Files, path string) (*result, error) {
+	policy, err := loadForEdit(files, path)
 	if err != nil {
 		return nil, err
 	}

@@ -9,6 +9,12 @@
 
 ## Command-specific details
 
+Every command that reads a policy, merge input, or lint config exits `2` when
+that file is not valid HuJSON (`config_invalid`) or is larger than
+`--max-policy-bytes` (`config_too_large`). Neither is a verdict about the
+policy. When an input error and an indeterminate answer are both part of a
+failure, the exit code is `10`.
+
 `test` uses `--indeterminate=warn` by default, so an indeterminate assertion
 exits `10` when there is no definite failure. `fail` maps that outcome to `1`;
 `ignore` maps it to `0`. Both modes preserve the finding in output.

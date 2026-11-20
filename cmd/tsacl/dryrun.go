@@ -11,13 +11,12 @@ import (
 	"slices"
 	"strings"
 
-	diff "github.com/hexops/gotextdiff"
-	"github.com/hexops/gotextdiff/myers"
-	"github.com/hexops/gotextdiff/span"
 	"github.com/rshade/ax-go"
 	"github.com/spf13/cobra"
 
+	"github.com/rshade/tsacl/internal/aclpolicy"
 	"github.com/rshade/tsacl/internal/observedstate"
+	"github.com/rshade/tsacl/internal/policydiff"
 	"github.com/rshade/tsacl/internal/tailapi"
 )
 
@@ -110,7 +109,7 @@ func rehearseOnPrivateCopy(
 		res.Message = strings.ReplaceAll(res.Message, tempPath, realPath)
 		res.File = strings.ReplaceAll(res.File, tempPath, realPath)
 		if res.Diff == "" && !bytes.Equal(before, after) {
-			res.Diff = unifiedDiff(realPath, before, after)
+			res.Diff = policydiff.Unified("current", before, realPath, after)
 		}
 	}
 	return rewritePath(runErr, tempPath, realPath)
@@ -132,11 +131,6 @@ func readIfPresent(path string) ([]byte, error) {
 	return data, err
 }
 
-func unifiedDiff(path string, before, after []byte) string {
-	edits := myers.ComputeEdits(span.URIFromPath(path), string(before), string(after))
-	return fmt.Sprint(diff.ToUnified("current", path, string(before), edits))
-}
-
 // rewritePath restores the real path in an error raised against the private
 // copy while keeping the original error in the chain for classification.
 func rewritePath(err error, tempPath, realPath string) error {
@@ -148,14 +142,14 @@ func rewritePath(err error, tempPath, realPath string) error {
 
 // rehearseMerge runs a merge with a capturing writer and reports the diff
 // between the current output file and the merged document.
-func rehearseMerge(request mergeRequest) (*result, error) {
+func rehearseMerge(files aclpolicy.Files, request mergeRequest) (*result, error) {
 	var target string
 	var merged []byte
 	request.write = func(path string, data []byte) error {
 		target, merged = path, data
 		return nil
 	}
-	res, err := runMerge(request)
+	res, err := runMerge(files, request)
 	if res == nil {
 		return res, err
 	}
@@ -165,7 +159,7 @@ func rehearseMerge(request mergeRequest) (*result, error) {
 		return res, readErr
 	}
 	if !bytes.Equal(before, merged) {
-		res.Diff = unifiedDiff(target, before, merged)
+		res.Diff = policydiff.Unified("current", before, target, merged)
 	}
 	return res, err
 }
@@ -192,7 +186,7 @@ func rehearseUpload(
 	if err != nil {
 		return nil, err
 	}
-	plan, err := tailapi.PlanFile(ctx, client, opts.file)
+	plan, err := tailapi.PlanFile(ctx, client, opts.policyFiles(), opts.file)
 	err = tailapi.WrapOAuthError(err, tailapi.ScopePolicyFileRead, opts.oauthClientID, opts.oauthClientSecret)
 	if err != nil {
 		return nil, err

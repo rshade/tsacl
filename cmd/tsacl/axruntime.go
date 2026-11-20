@@ -35,12 +35,21 @@ func (e exitStatusError) Error() string { return "exit status " + strconv.Itoa(e
 // axErrorFor translates a command error into the ax-go error envelope. The
 // exit code always comes from exitCode, which stays the single source of the
 // 0/1/2/10 scheme.
+//
+// An *ax.Error at the top of the chain is tsacl's own envelope and is kept
+// as is. One nested deeper — a policycore input error, typically — lends the
+// envelope its code, fix, and retry signal, but never its message: the
+// message is err's own text, which carries tsacl's prefix and, under
+// --sanitize, is the only text the sanitizer has scrubbed.
 func axErrorFor(ctx context.Context, err error, extra ...ax.ErrorOption) *ax.Error {
-	if existing, ok := errors.AsType[*ax.Error](err); ok {
-		return existing
+	if top, ok := err.(*ax.Error); ok { //nolint:errorlint // only the top of the chain carries the final message
+		return top
+	}
+	opts := append([]ax.ErrorOption{ax.WithErrorTool(toolName), ax.WithErrorExitCode(exitCode(err))}, extra...)
+	if nested, ok := errors.AsType[*ax.Error](err); ok {
+		return ax.NewError(ctx, nested.ErrorCode, err.Error(), append(opts, adoptedErrorOptions(nested)...)...)
 	}
 	code := errCodeFailed
-	opts := append([]ax.ErrorOption{ax.WithErrorTool(toolName), ax.WithErrorExitCode(exitCode(err))}, extra...)
 
 	var usage usageError
 	unavailable, isUnavailable := errors.AsType[*tailapi.ValidationUnavailableError](err)
@@ -63,6 +72,20 @@ func axErrorFor(ctx context.Context, err error, extra ...ax.ErrorOption) *ax.Err
 		}
 	}
 	return ax.NewError(ctx, code, err.Error(), opts...)
+}
+
+// adoptedErrorOptions carries a nested envelope's classification into a new
+// one. Context and Suggestions are deliberately not copied: they bypass the
+// sanitizer, and policycore never sets them.
+func adoptedErrorOptions(nested *ax.Error) []ax.ErrorOption {
+	opts := []ax.ErrorOption{ax.WithActionableFix(nested.ActionableFix)}
+	if nested.Retryable != nil {
+		opts = append(opts, ax.WithRetryable(*nested.Retryable))
+	}
+	if nested.RetryAfterSeconds > 0 {
+		opts = append(opts, ax.WithRetryAfterSeconds(nested.RetryAfterSeconds))
+	}
+	return opts
 }
 
 // runtimeOptions configures ax.Execute. WithStdoutIsTTY(true) is deliberate:
