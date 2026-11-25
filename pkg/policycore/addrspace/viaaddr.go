@@ -16,6 +16,7 @@ const (
 	maxSiteID        = uint32(1<<16 - 1)
 	siteIDStartByte  = 8
 	siteIDEndByte    = 12
+	ipv4StartByte    = siteIDEndByte
 )
 
 //nolint:gochecknoglobals // memoizes a compile-time-constant CIDR parse for process lifetime; avoids re-parsing on every isViaPrefix call.
@@ -29,16 +30,42 @@ var viaRange = netip.MustParsePrefix(viaRangeCIDR)
 // is not a CIDR.
 func SiteID(cidr string) (uint32, bool) {
 	prefix, err := netip.ParsePrefix(cidr)
-	if err != nil || !isViaPrefix(prefix) || prefix.Bits() < minViaPrefixBits {
+	if err != nil {
 		return 0, false
+	}
+	siteID, _, ok := UnmapVia(prefix)
+	return siteID, ok
+}
+
+// MapVia returns the 4via6 prefix for v4 at siteID, with host bits masked. ok
+// is false when v4 is not a valid native IPv4 prefix or siteID is above 65535.
+// An IPv4-mapped IPv6 prefix is not native; ipcalc.Unmap4In6 normalizes one.
+func MapVia(siteID uint32, v4 netip.Prefix) (netip.Prefix, bool) {
+	if !v4.IsValid() || !v4.Addr().Is4() || siteID > maxSiteID {
+		return netip.Prefix{}, false
 	}
 
-	address := prefix.Addr().As16()
+	address := viaRange.Addr().As16()
+	binary.BigEndian.PutUint32(address[siteIDStartByte:siteIDEndByte], siteID)
+	embedded := v4.Masked().Addr().As4()
+	copy(address[ipv4StartByte:], embedded[:])
+	return netip.PrefixFrom(netip.AddrFrom16(address), minViaPrefixBits+v4.Bits()), true
+}
+
+// UnmapVia returns the site ID and IPv4 prefix that via encodes, with host
+// bits masked. ok is false for any prefix whose string form SiteID rejects.
+func UnmapVia(via netip.Prefix) (uint32, netip.Prefix, bool) {
+	if !isViaPrefix(via) || via.Bits() < minViaPrefixBits {
+		return 0, netip.Prefix{}, false
+	}
+
+	address := via.Addr().As16()
 	siteID := binary.BigEndian.Uint32(address[siteIDStartByte:siteIDEndByte])
 	if siteID > maxSiteID {
-		return 0, false
+		return 0, netip.Prefix{}, false
 	}
-	return siteID, true
+	embedded := netip.AddrFrom4([4]byte(address[ipv4StartByte:]))
+	return siteID, netip.PrefixFrom(embedded, via.Bits()-minViaPrefixBits).Masked(), true
 }
 
 // IsViaPrefix reports whether cidr, once masked to its own prefix length,

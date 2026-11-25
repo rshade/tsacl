@@ -116,6 +116,18 @@ site ID is invalid, allowing a caller to distinguish a malformed via route from
 an ordinary route. `addrspace.SiteID` performs the full validation and returns
 the embedded 16-bit site ID only for valid `/96` through `/128` via prefixes.
 
+`addrspace.UnmapVia` accepts what `SiteID` accepts, as a `netip.Prefix`, and also
+returns the embedded IPv4 prefix. `addrspace.MapVia` builds the via prefix from a
+site ID and a native IPv4 prefix. Both mask host bits, so equal inputs give equal
+results. A policy writes the site ID in hexadecimal: `:14:` is site 20.
+
+```go
+via, ok := addrspace.MapVia(3, netip.MustParsePrefix("10.0.0.0/24"))
+// fd7a:115c:a1e0:b1a:0:3:a00:0/120, true
+siteID, v4, ok := addrspace.UnmapVia(via)
+// 3, 10.0.0.0/24, true
+```
+
 ## Subnet arithmetic
 
 Subnet arithmetic lives in its own package, [`pkg/ipcalc`](../../ipcalc/README.md),
