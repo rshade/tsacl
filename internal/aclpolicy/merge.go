@@ -14,11 +14,17 @@ import (
 // MergePair deep-merges addPath into basePath and returns formatted HuJSON.
 // Comments and formatting attached to the base policy are retained.
 func MergePair(basePath, addPath string) ([]byte, error) {
-	base, err := parseFile(basePath)
+	return Files{}.MergePair(basePath, addPath)
+}
+
+// MergePair is the package-level MergePair, reading both inputs under f's
+// limit.
+func (f Files) MergePair(basePath, addPath string) ([]byte, error) {
+	base, err := f.Limits.ParseFile(basePath)
 	if err != nil {
 		return nil, err
 	}
-	add, err := parseFile(addPath)
+	add, err := f.Limits.ParseFile(addPath)
 	if err != nil {
 		return nil, err
 	}
@@ -33,6 +39,12 @@ func MergePair(basePath, addPath string) ([]byte, error) {
 // the selected input paths, and any error. The output path is excluded so a
 // generated acl.json is not merged again on subsequent runs.
 func MergeDirectories(dirs []string, outputPath string) ([]byte, []string, error) {
+	return Files{}.MergeDirectories(dirs, outputPath)
+}
+
+// MergeDirectories is the package-level MergeDirectories, reading every
+// fragment under f's limit.
+func (f Files) MergeDirectories(dirs []string, outputPath string) ([]byte, []string, error) {
 	paths, err := ACLFilesInDirectories(dirs, outputPath)
 	if err != nil {
 		return nil, nil, err
@@ -44,12 +56,12 @@ func MergeDirectories(dirs []string, outputPath string) ([]byte, []string, error
 		)
 	}
 
-	merged, err := parseFile(paths[0])
+	merged, err := f.Limits.ParseFile(paths[0])
 	if err != nil {
 		return nil, nil, err
 	}
 	for _, path := range paths[1:] {
-		value, parseErr := parseFile(path)
+		value, parseErr := f.Limits.ParseFile(path)
 		if parseErr != nil {
 			return nil, nil, parseErr
 		}

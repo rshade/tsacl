@@ -58,6 +58,11 @@
             "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
             "type": "string"
           },
+          "max-policy-bytes": {
+            "default": 16777216,
+            "description": "largest policy, merge input, or lint config to read, in bytes (1 to 1073741824)",
+            "type": "integer"
+          },
           "oauth-client-id": {
             "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
             "type": "string"
@@ -180,6 +185,11 @@
             "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
             "type": "string"
           },
+          "max-policy-bytes": {
+            "default": 16777216,
+            "description": "largest policy, merge input, or lint config to read, in bytes (1 to 1073741824)",
+            "type": "integer"
+          },
           "oauth-client-id": {
             "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
             "type": "string"
@@ -291,6 +301,11 @@
             "default": "warn",
             "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
             "type": "string"
+          },
+          "max-policy-bytes": {
+            "default": 16777216,
+            "description": "largest policy, merge input, or lint config to read, in bytes (1 to 1073741824)",
+            "type": "integer"
           },
           "oauth-client-id": {
             "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
@@ -440,6 +455,11 @@
             "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
             "type": "string"
           },
+          "max-policy-bytes": {
+            "default": 16777216,
+            "description": "largest policy, merge input, or lint config to read, in bytes (1 to 1073741824)",
+            "type": "integer"
+          },
           "oauth-client-id": {
             "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
             "type": "string"
@@ -549,6 +569,11 @@
             "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
             "type": "string"
           },
+          "max-policy-bytes": {
+            "default": 16777216,
+            "description": "largest policy, merge input, or lint config to read, in bytes (1 to 1073741824)",
+            "type": "integer"
+          },
           "oauth-client-id": {
             "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
             "type": "string"
@@ -657,6 +682,11 @@
             "default": "warn",
             "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
             "type": "string"
+          },
+          "max-policy-bytes": {
+            "default": 16777216,
+            "description": "largest policy, merge input, or lint config to read, in bytes (1 to 1073741824)",
+            "type": "integer"
           },
           "oauth-client-id": {
             "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
@@ -773,6 +803,11 @@
           "ip": {
             "description": "IP protocol and port expression; may be repeated",
             "type": "string"
+          },
+          "max-policy-bytes": {
+            "default": 16777216,
+            "description": "largest policy, merge input, or lint config to read, in bytes (1 to 1073741824)",
+            "type": "integer"
           },
           "oauth-client-id": {
             "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
@@ -896,6 +931,11 @@
             "description": "index of the grant to remove",
             "type": "integer"
           },
+          "max-policy-bytes": {
+            "default": 16777216,
+            "description": "largest policy, merge input, or lint config to read, in bytes (1 to 1073741824)",
+            "type": "integer"
+          },
           "oauth-client-id": {
             "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
             "type": "string"
@@ -1003,6 +1043,11 @@
             "default": "warn",
             "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
             "type": "string"
+          },
+          "max-policy-bytes": {
+            "default": 16777216,
+            "description": "largest policy, merge input, or lint config to read, in bytes (1 to 1073741824)",
+            "type": "integer"
           },
           "member": {
             "description": "group login or autogroup; may be repeated",
@@ -1126,6 +1171,11 @@
             "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
             "type": "string"
           },
+          "max-policy-bytes": {
+            "default": 16777216,
+            "description": "largest policy, merge input, or lint config to read, in bytes (1 to 1073741824)",
+            "type": "integer"
+          },
           "name": {
             "description": "group definition name (group:NAME)",
             "type": "string"
@@ -1238,6 +1288,11 @@
             "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
             "type": "string"
           },
+          "max-policy-bytes": {
+            "default": 16777216,
+            "description": "largest policy, merge input, or lint config to read, in bytes (1 to 1073741824)",
+            "type": "integer"
+          },
           "oauth-client-id": {
             "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
             "type": "string"
@@ -1346,6 +1401,11 @@
             "default": "warn",
             "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
             "type": "string"
+          },
+          "max-policy-bytes": {
+            "default": 16777216,
+            "description": "largest policy, merge input, or lint config to read, in bytes (1 to 1073741824)",
+            "type": "integer"
           },
           "oauth-client-id": {
             "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
@@ -1458,6 +1518,11 @@
             "default": "warn",
             "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
             "type": "string"
+          },
+          "max-policy-bytes": {
+            "default": 16777216,
+            "description": "largest policy, merge input, or lint config to read, in bytes (1 to 1073741824)",
+            "type": "integer"
           },
           "member": {
             "description": "CIDR, address, range A-B, host:ALIAS, ipset:NAME, or add|remove MEMBER; may be repeated",
@@ -1581,6 +1646,11 @@
             "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
             "type": "string"
           },
+          "max-policy-bytes": {
+            "default": 16777216,
+            "description": "largest policy, merge input, or lint config to read, in bytes (1 to 1073741824)",
+            "type": "integer"
+          },
           "name": {
             "description": "ipset definition name (ipset:NAME)",
             "type": "string"
@@ -1689,6 +1759,11 @@
             "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
             "type": "string"
           },
+          "max-policy-bytes": {
+            "default": 16777216,
+            "description": "largest policy, merge input, or lint config to read, in bytes (1 to 1073741824)",
+            "type": "integer"
+          },
           "oauth-client-id": {
             "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
             "type": "string"
@@ -1796,6 +1871,11 @@
             "default": "warn",
             "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
             "type": "string"
+          },
+          "max-policy-bytes": {
+            "default": 16777216,
+            "description": "largest policy, merge input, or lint config to read, in bytes (1 to 1073741824)",
+            "type": "integer"
           },
           "oauth-client-id": {
             "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
@@ -1937,6 +2017,11 @@
             "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
             "type": "string"
           },
+          "max-policy-bytes": {
+            "default": 16777216,
+            "description": "largest policy, merge input, or lint config to read, in bytes (1 to 1073741824)",
+            "type": "integer"
+          },
           "oauth-client-id": {
             "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
             "type": "string"
@@ -2056,6 +2141,11 @@
           "ip-pool": {
             "description": "IP pool CIDR; may be repeated",
             "type": "string"
+          },
+          "max-policy-bytes": {
+            "default": 16777216,
+            "description": "largest policy, merge input, or lint config to read, in bytes (1 to 1073741824)",
+            "type": "integer"
           },
           "oauth-client-id": {
             "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
@@ -2183,6 +2273,11 @@
             "description": "IP pool CIDR; may be repeated",
             "type": "string"
           },
+          "max-policy-bytes": {
+            "default": 16777216,
+            "description": "largest policy, merge input, or lint config to read, in bytes (1 to 1073741824)",
+            "type": "integer"
+          },
           "oauth-client-id": {
             "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
             "type": "string"
@@ -2291,6 +2386,11 @@
             "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
             "type": "string"
           },
+          "max-policy-bytes": {
+            "default": 16777216,
+            "description": "largest policy, merge input, or lint config to read, in bytes (1 to 1073741824)",
+            "type": "integer"
+          },
           "oauth-client-id": {
             "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
             "type": "string"
@@ -2395,6 +2495,11 @@
             "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
             "type": "string"
           },
+          "max-policy-bytes": {
+            "default": 16777216,
+            "description": "largest policy, merge input, or lint config to read, in bytes (1 to 1073741824)",
+            "type": "integer"
+          },
           "oauth-client-id": {
             "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
             "type": "string"
@@ -2498,6 +2603,11 @@
             "default": "warn",
             "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
             "type": "string"
+          },
+          "max-policy-bytes": {
+            "default": 16777216,
+            "description": "largest policy, merge input, or lint config to read, in bytes (1 to 1073741824)",
+            "type": "integer"
           },
           "oauth-client-id": {
             "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
@@ -2606,6 +2716,11 @@
             "default": "warn",
             "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
             "type": "string"
+          },
+          "max-policy-bytes": {
+            "default": 16777216,
+            "description": "largest policy, merge input, or lint config to read, in bytes (1 to 1073741824)",
+            "type": "integer"
           },
           "oauth-client-id": {
             "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
@@ -2720,6 +2835,11 @@
             "default": "warn",
             "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
             "type": "string"
+          },
+          "max-policy-bytes": {
+            "default": 16777216,
+            "description": "largest policy, merge input, or lint config to read, in bytes (1 to 1073741824)",
+            "type": "integer"
           },
           "oauth-client-id": {
             "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
@@ -2845,6 +2965,11 @@
             "default": "warn",
             "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
             "type": "string"
+          },
+          "max-policy-bytes": {
+            "default": 16777216,
+            "description": "largest policy, merge input, or lint config to read, in bytes (1 to 1073741824)",
+            "type": "integer"
           },
           "oauth-client-id": {
             "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
@@ -2993,6 +3118,11 @@
             "description": "remove the SSH rule at this zero-based index",
             "type": "integer"
           },
+          "max-policy-bytes": {
+            "default": 16777216,
+            "description": "largest policy, merge input, or lint config to read, in bytes (1 to 1073741824)",
+            "type": "integer"
+          },
           "oauth-client-id": {
             "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
             "type": "string"
@@ -3117,6 +3247,11 @@
             "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
             "type": "string"
           },
+          "max-policy-bytes": {
+            "default": 16777216,
+            "description": "largest policy, merge input, or lint config to read, in bytes (1 to 1073741824)",
+            "type": "integer"
+          },
           "oauth-client-id": {
             "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
             "type": "string"
@@ -3230,6 +3365,11 @@
             "default": "500ms",
             "description": "polling interval for --watch",
             "type": "string"
+          },
+          "max-policy-bytes": {
+            "default": 16777216,
+            "description": "largest policy, merge input, or lint config to read, in bytes (1 to 1073741824)",
+            "type": "integer"
           },
           "oauth-client-id": {
             "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
@@ -3353,6 +3493,11 @@
             "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
             "type": "string"
           },
+          "max-policy-bytes": {
+            "default": 16777216,
+            "description": "largest policy, merge input, or lint config to read, in bytes (1 to 1073741824)",
+            "type": "integer"
+          },
           "oauth-client-id": {
             "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
             "type": "string"
@@ -3473,6 +3618,11 @@
             "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
             "type": "string"
           },
+          "max-policy-bytes": {
+            "default": 16777216,
+            "description": "largest policy, merge input, or lint config to read, in bytes (1 to 1073741824)",
+            "type": "integer"
+          },
           "oauth-client-id": {
             "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
             "type": "string"
@@ -3590,6 +3740,11 @@
             "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
             "type": "string"
           },
+          "max-policy-bytes": {
+            "default": 16777216,
+            "description": "largest policy, merge input, or lint config to read, in bytes (1 to 1073741824)",
+            "type": "integer"
+          },
           "oauth-client-id": {
             "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",
             "type": "string"
@@ -3693,6 +3848,11 @@
             "default": "warn",
             "description": "test only: indeterminate assertion exit policy: fail|warn|ignore (check always exits 10)",
             "type": "string"
+          },
+          "max-policy-bytes": {
+            "default": 16777216,
+            "description": "largest policy, merge input, or lint config to read, in bytes (1 to 1073741824)",
+            "type": "integer"
           },
           "oauth-client-id": {
             "description": "OAuth client ID (default: TAILSCALE_OAUTH_CLIENT_ID)",

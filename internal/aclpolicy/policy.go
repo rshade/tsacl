@@ -14,7 +14,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 
 	"github.com/tailscale/hujson"
@@ -23,11 +22,13 @@ import (
 	"github.com/rshade/tsacl/pkg/policycore/hujsonedit"
 )
 
-// parseFile reads and parses path as HuJSON. It is a package-level wrapper
-// rather than a direct hujsonedit.ParseFile call at every site so merge.go's
-// call sites did not need to change when patch/comment mechanics moved to
-// hujsonedit.
-func parseFile(path string) (hujson.Value, error) { return hujsonedit.ParseFile(path) }
+// Files reads and writes policy and lint-config files under one read limit,
+// so every operator-supplied HuJSON input a command touches is bounded the
+// same way. The zero value applies hujsonedit's default limit (16 MiB); the
+// package-level functions use it.
+type Files struct {
+	Limits hujsonedit.Options
+}
 
 // PatchOperation is a schema-agnostic HuJSON patch mechanic that lives in
 // policycore/hujsonedit; this is a type alias so every existing call site in
@@ -162,16 +163,27 @@ func checkDuplicateMembers(document hujson.Value) error {
 	return nil
 }
 
-// ReadRaw reads path and verifies that it contains syntactically valid HuJSON.
-func ReadRaw(path string) ([]byte, error) {
-	b, err := os.ReadFile(path)
+// ReadRaw reads path under f's limit and verifies that it contains
+// syntactically valid HuJSON, returning the bytes exactly as read.
+func (f Files) ReadRaw(path string) ([]byte, error) {
+	b, _, err := f.ReadParsed(path)
+	return b, err
+}
+
+// ReadParsed is ReadRaw that also returns the syntax tree it parsed, so a
+// caller that needs both pays for one parse. The tree aliases the returned
+// bytes, and hujson's Format, Minimize, Standardize, and Patch rewrite it in
+// place: finish with the bytes before transforming the tree.
+func (f Files) ReadParsed(path string) ([]byte, hujson.Value, error) {
+	b, err := f.Limits.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return nil, hujson.Value{}, err
 	}
-	if _, err = hujson.Parse(b); err != nil {
-		return nil, fmt.Errorf("%s: %w", path, err)
+	tree, err := hujsonedit.Parse(path, b)
+	if err != nil {
+		return nil, hujson.Value{}, err
 	}
-	return b, nil
+	return b, tree, nil
 }
 
 // Normalize reads path and returns its contents as standard JSON. HuJSON-only
@@ -185,14 +197,17 @@ func ReadRaw(path string) ([]byte, error) {
 // this command feeds resolve them last-wins. Emitting the document would answer
 // an operator with the member tsacl itself discards, so normalize refuses the
 // file exactly as Load does.
-func Normalize(path string) ([]byte, error) {
-	raw, err := ReadRaw(path)
+func Normalize(path string) ([]byte, error) { return Files{}.Normalize(path) }
+
+// Normalize is the package-level Normalize under f's read limit.
+func (f Files) Normalize(path string) ([]byte, error) {
+	raw, err := f.ReadRaw(path)
 	if err != nil {
 		return nil, err
 	}
-	document, err := hujson.Parse(raw)
+	document, err := hujsonedit.Parse(path, raw)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", path, err)
+		return nil, err
 	}
 	if err = checkDuplicateMembers(document); err != nil {
 		return nil, fmt.Errorf("%s: %w", path, err)
@@ -205,8 +220,11 @@ func Normalize(path string) ([]byte, error) {
 // are rejected so an edit cannot silently discard policy data that neither the
 // pinned Tailscale client nor the local extensions model. Duplicate object
 // members are rejected for the same reason — see checkDuplicateMembers.
-func Load(path string) (*Policy, error) {
-	raw, err := ReadRaw(path)
+func Load(path string) (*Policy, error) { return Files{}.Load(path) }
+
+// Load is the package-level Load under f's read limit.
+func (f Files) Load(path string) (*Policy, error) {
+	raw, err := f.ReadRaw(path)
 	if err != nil {
 		return nil, err
 	}
@@ -219,9 +237,9 @@ func Load(path string) (*Policy, error) {
 // took a second would let it report a digest for bytes it never evaluated. name
 // is used only in error messages.
 func LoadBytes(name string, raw []byte) (*Policy, error) {
-	document, err := hujson.Parse(raw)
+	document, err := hujsonedit.Parse(name, raw)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", name, err)
+		return nil, err
 	}
 	if err = checkDuplicateMembers(document); err != nil {
 		return nil, fmt.Errorf("%s: %w", name, err)
@@ -366,5 +384,11 @@ func Write(path string, policy *Policy) error {
 // policycore/hujsonedit; this wrapper supplies resolveTopLevelKey so a policy
 // written in Tailscale's legacy capitalized style still resolves.
 func WritePatch(path string, operations ...PatchOperation) error {
-	return hujsonedit.WritePatch(path, resolveTopLevelKey, operations...)
+	return Files{}.WritePatch(path, operations...)
+}
+
+// WritePatch is the package-level WritePatch under f's read limit; a policy
+// over the limit is never rewritten.
+func (f Files) WritePatch(path string, operations ...PatchOperation) error {
+	return f.Limits.WritePatch(path, resolveTopLevelKey, operations...)
 }

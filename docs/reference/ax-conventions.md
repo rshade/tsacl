@@ -35,6 +35,14 @@ Each command documents its exact interpretation. In particular, warnings may
 be non-fatal, report-writing modes may alter whether findings gate a process,
 and not every tool needs an indeterminate state.
 
+Input errors raised by a shared library keep their library `error_code` in the
+tool's error envelope, so automation sees the same code from every tool. The
+tool still owns the envelope: the `message` is the tool's own text, sanitized
+when sanitization is on, and the exit code is the tool's. A library input error
+exits `2` and can replace only the fallback `1`, never an indeterminate `10`.
+`tsacl`'s [agent runtime](agent-runtime.md#errors-on-stderr) reference lists the
+codes.
+
 ## Discoverability
 
 Every binary provides rich command-line help, version information with build

@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"net/netip"
 	"strings"
+
+	"github.com/rshade/tsacl/pkg/policycore/errcode"
+	"github.com/rshade/tsacl/pkg/policycore/internal/coded"
 )
 
 // IPSetOperation is the operation word an ipset member may carry. The control
@@ -78,11 +81,12 @@ func (m IPSetMember) HostAlias() (string, bool) {
 func ParseIPSetMember(member string) (IPSetMember, error) {
 	operation, target, err := splitIPSetOperation(member)
 	if err != nil {
-		return IPSetMember{}, err
+		return IPSetMember{}, coded.New(errcode.IPSetMemberInvalid, err)
 	}
 	kind, canonical, err := parseIPSetTarget(target)
 	if err != nil {
-		return IPSetMember{}, fmt.Errorf("ipset member %q %w", strings.TrimSpace(member), err)
+		return IPSetMember{}, coded.Errorf(errcode.IPSetMemberInvalid,
+			"ipset member %q %w", strings.TrimSpace(member), err)
 	}
 	return IPSetMember{Operation: operation, Kind: kind, Target: canonical}, nil
 }
@@ -105,7 +109,8 @@ func ipsetOperationOf(member string) IPSetOperation {
 // IPSetImplicitMemberError reports a member list that carries a remove
 // operation alongside a member with no operation word. Member is the first
 // implicit member in list order and Remove the first remove operation, so a
-// message can name both.
+// message can name both. It arrives wrapped in an ipset_operation_ambiguous
+// contract error, so reach it with [errors.As] rather than a type assertion.
 type IPSetImplicitMemberError struct {
 	Member string
 	Remove string
@@ -134,7 +139,7 @@ func ValidateIPSetOperations(members []string) error {
 		}
 	}
 	if implicit != "" && remove != "" {
-		return &IPSetImplicitMemberError{Member: implicit, Remove: remove}
+		return coded.New(errcode.IPSetOperationAmbiguous, &IPSetImplicitMemberError{Member: implicit, Remove: remove})
 	}
 	return nil
 }

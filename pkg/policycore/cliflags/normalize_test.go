@@ -100,3 +100,14 @@ func TestNormalizeDoesNotMutateInput(t *testing.T) {
 		t.Errorf("input mutated: args[0] = %q, want %q", args[0], "-format")
 	}
 }
+
+func TestNormalizeRewritesAxExecuteFlagsBeforeRegistration(t *testing.T) {
+	t.Parallel()
+
+	root := &cobra.Command{Use: "bare"}
+	args := []string{"-format", "json", "-dry-run", "-yes", "-strict", "-idempotency-key=k1"}
+	want := []string{"--format", "json", "--dry-run", "--yes", "--strict", "--idempotency-key=k1"}
+	if got := cliflags.Normalize(root, args); !slices.Equal(got, want) {
+		t.Errorf("Normalize(%q) = %q, want %q", args, got, want)
+	}
+}

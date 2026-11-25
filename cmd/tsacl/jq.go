@@ -6,11 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
 
 	"github.com/itchyny/gojq"
 	"github.com/spf13/cobra"
-	"github.com/tailscale/hujson"
+
+	"github.com/rshade/tsacl/internal/aclpolicy"
+	"github.com/rshade/tsacl/pkg/policycore/hujsonedit"
 )
 
 func newJQCommand(deps *commandDeps) *cobra.Command {
@@ -29,7 +30,7 @@ func newJQCommand(deps *commandDeps) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			buffered := *deps.format == formatJSON
-			values, err := runJQ(ctx, deps.opts.file, args[0], buffered, cmd.OutOrStdout())
+			values, err := runJQ(ctx, deps.opts.policyFiles(), deps.opts.file, args[0], buffered, cmd.OutOrStdout())
 			if err != nil {
 				return err
 			}
@@ -58,12 +59,14 @@ func newJQCommand(deps *commandDeps) *cobra.Command {
 // values produced before it on stdout in human mode, and nothing at all in
 // JSON mode. Both are parse-clean — every human line is a complete JSON value
 // — and the non-zero exit is what tells a consumer the run was truncated.
-func runJQ(ctx context.Context, path, program string, buffered bool, stdout io.Writer) ([]any, error) {
+func runJQ(
+	ctx context.Context, files aclpolicy.Files, path, program string, buffered bool, stdout io.Writer,
+) ([]any, error) {
 	query, err := gojq.Parse(program)
 	if err != nil {
 		return nil, usagef("could not parse jq program: %v", err)
 	}
-	input, err := decodePolicyForQuery(path)
+	input, err := decodePolicyForQuery(files, path)
 	if err != nil {
 		return nil, err
 	}
@@ -96,17 +99,19 @@ func runJQ(ctx context.Context, path, program string, buffered bool, stdout io.W
 // silently rounds an integer past 2^53, which a policy carrying a device or
 // user ID would hit. gojq normalizes [json.Number] itself, so preserving the
 // literal here costs nothing downstream.
-func decodePolicyForQuery(path string) (any, error) {
-	raw, err := os.ReadFile(path)
+func decodePolicyForQuery(files aclpolicy.Files, path string) (any, error) {
+	raw, err := files.Limits.ReadFile(path)
 	if err != nil {
-		return nil, usagef("could not read policy %s: %v", path, err)
+		return nil, usagef("could not read policy %s: %w", path, err)
 	}
-	standard, err := hujson.Standardize(raw)
+	// hujsonedit.Parse's error already reads "<path>: hujson: ...".
+	document, err := hujsonedit.Parse(path, raw)
 	if err != nil {
-		return nil, usagef("could not parse policy %s: %v", path, err)
+		return nil, usagef("could not parse policy %w", err)
 	}
+	document.Standardize()
 	var input any
-	decoder := json.NewDecoder(bytes.NewReader(standard))
+	decoder := json.NewDecoder(bytes.NewReader(document.Pack()))
 	decoder.UseNumber()
 	if err = decoder.Decode(&input); err != nil {
 		return nil, usagef("could not decode policy %s: %v", path, err)

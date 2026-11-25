@@ -33,6 +33,7 @@ import (
 
 	"github.com/jaxxstorm/tscli/pkg/tscli"
 	"github.com/rshade/ax-go"
+	"github.com/rshade/ax-go/config"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -44,6 +45,8 @@ import (
 	"github.com/rshade/tsacl/internal/tailapi"
 	"github.com/rshade/tsacl/pkg/policycore"
 	"github.com/rshade/tsacl/pkg/policycore/cliflags"
+	"github.com/rshade/tsacl/pkg/policycore/errcode"
+	"github.com/rshade/tsacl/pkg/policycore/hujsonedit"
 	"github.com/rshade/tsacl/pkg/policycore/posture"
 	"github.com/rshade/tsacl/pkg/policycore/sanitize"
 )
@@ -207,6 +210,41 @@ type options struct {
 	strict            bool
 	roster            string
 	indeterminate     indeterminateOption
+	maxPolicyBytes    int64
+}
+
+// policyFiles is the policy file access every command shares, bounded by
+// --max-policy-bytes.
+func (o *options) policyFiles() aclpolicy.Files {
+	return aclpolicy.Files{Limits: hujsonedit.Options{MaxBytes: o.maxPolicyBytes}}
+}
+
+// validateInputFlags checks the global flags that describe a command's input
+// files, before any of those files is read.
+func validateInputFlags(cmd *cobra.Command, opts *options, rosterSupplied bool) error {
+	if err := validateMaxPolicyBytes(cmd.Context(), opts.maxPolicyBytes); err != nil {
+		return err
+	}
+	if err := validateRoster(cmd.Name(), opts.roster, rosterSupplied); err != nil {
+		return err
+	}
+	return validateIndeterminate(cmd.Name(), opts.indeterminate)
+}
+
+// validateMaxPolicyBytes rejects a limit outside 1 through ax-go's ceiling.
+// Zero is rejected even though hujsonedit reads it as "the default": an
+// operator who types 0 means no bytes, not 16 MiB.
+func validateMaxPolicyBytes(ctx context.Context, limit int64) error {
+	if limit >= 1 && limit <= config.MaxBytesCeiling {
+		return nil
+	}
+	return ax.NewError(ctx, errcode.ConfigMaxBytesInvalid,
+		fmt.Sprintf("--max-policy-bytes must be between 1 and %d, got %d", config.MaxBytesCeiling, limit),
+		ax.WithActionableFix(errcode.Fix(errcode.ConfigMaxBytesInvalid)),
+		ax.WithRetryable(false),
+		ax.WithErrorTool(toolName),
+		ax.WithErrorExitCode(exitUsage),
+	)
 }
 
 // indeterminateOption tracks whether the global flag was explicitly supplied
@@ -470,8 +508,6 @@ func exitCode(err error) int {
 		return exitOK
 	case errors.As(err, &es):
 		return es.code
-	case errors.As(err, &axErr):
-		return axErr.ExitCode()
 	case errors.Is(err, errReachabilityIndeterminate), outcome == tailapi.ValidationIndeterminate:
 		return exitIndeterminate
 	// A control plane that never judged the policy is a collection failure, not
@@ -484,6 +520,11 @@ func exitCode(err error) int {
 	case errors.As(err, &ue), outcome == tailapi.ValidationUnavailable,
 		errors.Is(err, context.Canceled):
 		return exitUsage
+	// An envelope's own code comes after tsacl's classifications, so a
+	// policycore input error (exit 2) can replace only the fallback exit 1,
+	// never an indeterminate 10 or a runtime-reported code.
+	case errors.As(err, &axErr):
+		return axErr.ExitCode()
 	default:
 		return exitFailed
 	}
@@ -512,6 +553,8 @@ func newRootCommand(getenv func(string) string, opts *options) *cobra.Command {
 	flags := root.PersistentFlags()
 	flags.StringVar(&opts.file, "file", "acl.json",
 		"policy file (typed edits preserve comments in JSON and HuJSON)")
+	flags.Int64Var(&opts.maxPolicyBytes, "max-policy-bytes", hujsonedit.DefaultMaxBytes,
+		"largest policy, merge input, or lint config to read, in bytes (1 to 1073741824)")
 	flags.StringVar(&opts.tailnet, "tailnet", getenv("TAILSCALE_TAILNET"),
 		"tailnet name or ID (default: TAILSCALE_TAILNET)")
 	flags.StringVar(&opts.apiKey, "api-key", "", "Tailscale API access token (default: TAILSCALE_API_KEY)")
@@ -613,12 +656,7 @@ func execute(
 		if _, ok := parseColorMode(colorRaw); !ok {
 			return usagef("unknown -color %q; want auto, always, or never", colorRaw)
 		}
-		if rosterErr := validateRoster(
-			cmd.Name(), opts.roster, root.PersistentFlags().Changed("roster"),
-		); rosterErr != nil {
-			return rosterErr
-		}
-		return validateIndeterminate(cmd.Name(), opts.indeterminate)
+		return validateInputFlags(cmd, &opts, root.PersistentFlags().Changed("roster"))
 	}
 
 	deps := commandDeps{
@@ -810,7 +848,7 @@ func loadRoster(path string) (map[string]tailscale.UserRole, error) {
 	}
 	roster, err := policycore.ParseRoster(raw)
 	if err != nil {
-		return nil, usagef("could not load --roster %s: %v", path, err)
+		return nil, usagef("could not load --roster %s: %w", path, err)
 	}
 	return roster, nil
 }
@@ -1141,6 +1179,7 @@ func resolveGrantAdd(
 }
 
 func runGrantAdd(
+	files aclpolicy.Files,
 	path string,
 	source, destination, ip, srcPosture []string,
 	comment string,
@@ -1152,7 +1191,7 @@ func runGrantAdd(
 	if err != nil {
 		return nil, err
 	}
-	policy, err := loadForEdit(path)
+	policy, err := loadForEdit(files, path)
 	if err != nil {
 		return nil, err
 	}
@@ -1171,7 +1210,7 @@ func runGrantAdd(
 			// the established idempotent behavior even when lint would report
 			// duplicate grants.
 			if comment == "" {
-				return commentExistingGrant(path, comment, overwriteComment, i)
+				return commentExistingGrant(files, path, comment, overwriteComment, i)
 			}
 			matchingGrants = append(matchingGrants, i)
 		}
@@ -1183,7 +1222,7 @@ func runGrantAdd(
 		)
 	}
 	if len(matchingGrants) == 1 {
-		return commentExistingGrant(path, comment, overwriteComment, matchingGrants[0])
+		return commentExistingGrant(files, path, comment, overwriteComment, matchingGrants[0])
 	}
 	grantsPresent := policy.Grants != nil
 	policy.Grants = append(policy.Grants, grant)
@@ -1197,7 +1236,7 @@ func runGrantAdd(
 		// grant whether the operation created the block or added into it.
 		operations = append(operations, commentPatch(comment, overwriteComment, "grants", "-"))
 	}
-	if err = aclpolicy.WritePatch(path, operations...); err != nil {
+	if err = files.WritePatch(path, operations...); err != nil {
 		return nil, err
 	}
 	index := len(policy.Grants) - 1
@@ -1209,8 +1248,8 @@ func runGrantAdd(
 // carries. A comment is the only thing such a call can still change: a grant's
 // identity is its selectors, and tailscale.Grant has no comment field, so
 // comment state lives in the syntax tree alone.
-func commentExistingGrant(path, comment string, overwrite bool, index int) (*result, error) {
-	operations, err := commentOperations(path, comment, overwrite, "grants", strconv.Itoa(index))
+func commentExistingGrant(files aclpolicy.Files, path, comment string, overwrite bool, index int) (*result, error) {
+	operations, err := commentOperations(files, path, comment, overwrite, "grants", strconv.Itoa(index))
 	if err != nil {
 		return nil, err
 	}
@@ -1218,15 +1257,15 @@ func commentExistingGrant(path, comment string, overwrite bool, index int) (*res
 		return grantResult(commandGrantAdd, statusNoChanges,
 			fmt.Sprintf("grant %d already exists in %s", index, path), path, index), nil
 	}
-	if err = aclpolicy.WritePatch(path, operations...); err != nil {
+	if err = files.WritePatch(path, operations...); err != nil {
 		return nil, err
 	}
 	return grantResult(commandGrantAdd, statusOK,
 		fmt.Sprintf("added comment to grant %d in %s", index, path), path, index), nil
 }
 
-func runGrantRemove(path string, index int) (*result, error) {
-	policy, err := loadForEdit(path)
+func runGrantRemove(files aclpolicy.Files, path string, index int) (*result, error) {
+	policy, err := loadForEdit(files, path)
 	if err != nil {
 		return nil, err
 	}
@@ -1238,7 +1277,7 @@ func runGrantRemove(path string, index int) (*result, error) {
 	// allow-all default, while an explicit empty array denies everything, so
 	// pruning the last grant would silently open the tailnet. Keeping the key
 	// also keeps its comments.
-	if err = aclpolicy.WritePatch(path, aclpolicy.PatchRemove("grants", strconv.Itoa(index))); err != nil {
+	if err = files.WritePatch(path, aclpolicy.PatchRemove("grants", strconv.Itoa(index))); err != nil {
 		return nil, err
 	}
 	return grantResult(commandGrantRemove, statusOK,
@@ -1253,6 +1292,7 @@ func grantResult(command, status, message, path string, index int) *result {
 }
 
 func runDefinitionAdd(
+	files aclpolicy.Files,
 	path string,
 	kind aclpolicy.DefinitionKind,
 	name string,
@@ -1264,7 +1304,7 @@ func runDefinitionAdd(
 	if err != nil {
 		return nil, err
 	}
-	policy, err := loadForEdit(path)
+	policy, err := loadForEdit(files, path)
 	if err != nil {
 		return nil, err
 	}
@@ -1272,10 +1312,11 @@ func runDefinitionAdd(
 	if err != nil {
 		return nil, usageError{err}
 	}
-	return finishDefinitionAdd(path, kind, edit, comment, overwriteComment)
+	return finishDefinitionAdd(files, path, kind, edit, comment, overwriteComment)
 }
 
 func runIPSetAdd(
+	files aclpolicy.Files,
 	path string,
 	name string,
 	members []aclpolicy.IPSetMemberSpec,
@@ -1286,7 +1327,7 @@ func runIPSetAdd(
 	if err != nil {
 		return nil, err
 	}
-	policy, err := loadForEdit(path)
+	policy, err := loadForEdit(files, path)
 	if err != nil {
 		return nil, err
 	}
@@ -1294,12 +1335,13 @@ func runIPSetAdd(
 	if err != nil {
 		return nil, usageError{err}
 	}
-	return finishDefinitionAdd(path, aclpolicy.DefinitionIPSet, edit, comment, overwriteComment)
+	return finishDefinitionAdd(files, path, aclpolicy.DefinitionIPSet, edit, comment, overwriteComment)
 }
 
 // finishDefinitionAdd applies a validated definition edit plus any comment
 // operation and renders the shared add result for both definition kinds.
 func finishDefinitionAdd(
+	files aclpolicy.Files,
 	path string,
 	kind aclpolicy.DefinitionKind,
 	edit aclpolicy.DefinitionEdit,
@@ -1312,7 +1354,7 @@ func finishDefinitionAdd(
 		var commentOps []aclpolicy.PatchOperation
 		var err error
 		if edit.Existed {
-			commentOps, err = commentOperations(path, comment, overwriteComment, topLevel, edit.Name)
+			commentOps, err = commentOperations(files, path, comment, overwriteComment, topLevel, edit.Name)
 		} else {
 			commentOps = []aclpolicy.PatchOperation{commentPatch(comment, overwriteComment, topLevel, edit.Name)}
 		}
@@ -1325,7 +1367,7 @@ func finishDefinitionAdd(
 	status := statusNoChanges
 	message := fmt.Sprintf("%s %s already has the requested members in %s", kind, edit.Name, path)
 	if len(operations) != 0 {
-		if err := aclpolicy.WritePatch(path, operations...); err != nil {
+		if err := files.WritePatch(path, operations...); err != nil {
 			return nil, err
 		}
 		status = statusOK
@@ -1338,6 +1380,7 @@ func finishDefinitionAdd(
 }
 
 func runDefinitionRemove(
+	files aclpolicy.Files,
 	path string,
 	kind aclpolicy.DefinitionKind,
 	name string,
@@ -1347,7 +1390,7 @@ func runDefinitionRemove(
 	if err != nil {
 		return nil, usageError{err}
 	}
-	policy, err := loadForEdit(path)
+	policy, err := loadForEdit(files, path)
 	if err != nil {
 		return nil, err
 	}
@@ -1359,7 +1402,7 @@ func runDefinitionRemove(
 	status := statusNoChanges
 	message := fmt.Sprintf("%s %s not present in %s", kind, canonical, path)
 	if edit.Changed() {
-		if err = aclpolicy.WritePatch(path, edit.Operations...); err != nil {
+		if err = files.WritePatch(path, edit.Operations...); err != nil {
 			return nil, err
 		}
 		status = statusOK
@@ -1372,6 +1415,7 @@ func runDefinitionRemove(
 }
 
 func runSSHAdd(
+	files aclpolicy.Files,
 	path string,
 	spec aclpolicy.SSHRuleSpec,
 	comment string,
@@ -1381,7 +1425,7 @@ func runSSHAdd(
 	if err != nil {
 		return nil, err
 	}
-	policy, err := loadForEdit(path)
+	policy, err := loadForEdit(files, path)
 	if err != nil {
 		return nil, err
 	}
@@ -1395,7 +1439,7 @@ func runSSHAdd(
 			edit.Operations = append(edit.Operations, commentPatch(comment, overwriteComment, "ssh", "-"))
 		} else {
 			operations, commentErr := commentOperations(
-				path, comment, overwriteComment, "ssh", strconv.Itoa(edit.RuleIndex),
+				files, path, comment, overwriteComment, "ssh", strconv.Itoa(edit.RuleIndex),
 			)
 			if commentErr != nil {
 				return nil, commentErr
@@ -1406,7 +1450,7 @@ func runSSHAdd(
 	status := statusNoChanges
 	message := fmt.Sprintf("SSH rule already present in %s", path)
 	if edit.Changed() {
-		if err = aclpolicy.WritePatch(path, edit.Operations...); err != nil {
+		if err = files.WritePatch(path, edit.Operations...); err != nil {
 			return nil, err
 		}
 		status = statusOK
@@ -1421,8 +1465,8 @@ func runSSHAdd(
 	return res, nil
 }
 
-func runSSHRemove(path string, spec aclpolicy.SSHRuleSpec) (*result, error) {
-	policy, err := loadForEdit(path)
+func runSSHRemove(files aclpolicy.Files, path string, spec aclpolicy.SSHRuleSpec) (*result, error) {
+	policy, err := loadForEdit(files, path)
 	if err != nil {
 		return nil, err
 	}
@@ -1433,7 +1477,7 @@ func runSSHRemove(path string, spec aclpolicy.SSHRuleSpec) (*result, error) {
 	status := statusNoChanges
 	message := fmt.Sprintf("SSH rule not present in %s", path)
 	if edit.Changed() {
-		if err = aclpolicy.WritePatch(path, edit.Operations...); err != nil {
+		if err = files.WritePatch(path, edit.Operations...); err != nil {
 			return nil, err
 		}
 		status = statusOK
@@ -1444,8 +1488,8 @@ func runSSHRemove(path string, spec aclpolicy.SSHRuleSpec) (*result, error) {
 	return res, nil
 }
 
-func runSSHRemoveAt(path string, index int) (*result, error) {
-	policy, err := loadForEdit(path)
+func runSSHRemoveAt(files aclpolicy.Files, path string, index int) (*result, error) {
+	policy, err := loadForEdit(files, path)
 	if err != nil {
 		return nil, err
 	}
@@ -1453,7 +1497,7 @@ func runSSHRemoveAt(path string, index int) (*result, error) {
 	if err != nil {
 		return nil, usageError{err}
 	}
-	if err = aclpolicy.WritePatch(path, edit.Operations...); err != nil {
+	if err = files.WritePatch(path, edit.Operations...); err != nil {
 		return nil, err
 	}
 	res := newResult(commandSSHRemove, statusOK, fmt.Sprintf("removed SSH rule %d from %s", index, path))
@@ -1462,6 +1506,7 @@ func runSSHRemoveAt(path string, index int) (*result, error) {
 }
 
 func runNodeAttrAdd(
+	files aclpolicy.Files,
 	path string,
 	spec aclpolicy.NodeAttrSpec,
 	comment string,
@@ -1471,7 +1516,7 @@ func runNodeAttrAdd(
 	if err != nil {
 		return nil, err
 	}
-	policy, err := loadForEdit(path)
+	policy, err := loadForEdit(files, path)
 	if err != nil {
 		return nil, err
 	}
@@ -1486,7 +1531,7 @@ func runNodeAttrAdd(
 				commentPatch(comment, overwriteComment, nodeAttrsTopLevel, "-"))
 		} else {
 			commentOps, commentErr := commentOperations(
-				path, comment, overwriteComment, nodeAttrsTopLevel, strconv.Itoa(edit.EntryIndex))
+				files, path, comment, overwriteComment, nodeAttrsTopLevel, strconv.Itoa(edit.EntryIndex))
 			if commentErr != nil {
 				return nil, commentErr
 			}
@@ -1496,7 +1541,7 @@ func runNodeAttrAdd(
 	res := newResult(commandNodeAttrAdd, statusNoChanges,
 		fmt.Sprintf("node attributes already present for target set in %s", path))
 	if len(operations) != 0 {
-		if err = aclpolicy.WritePatch(path, operations...); err != nil {
+		if err = files.WritePatch(path, operations...); err != nil {
 			return nil, err
 		}
 		message := fmt.Sprintf("updated node attributes for target set in %s", path)
@@ -1509,8 +1554,8 @@ func runNodeAttrAdd(
 	return res, nil
 }
 
-func runNodeAttrRemove(path string, spec aclpolicy.NodeAttrSpec) (*result, error) {
-	policy, err := loadForEdit(path)
+func runNodeAttrRemove(files aclpolicy.Files, path string, spec aclpolicy.NodeAttrSpec) (*result, error) {
+	policy, err := loadForEdit(files, path)
 	if err != nil {
 		return nil, err
 	}
@@ -1521,7 +1566,7 @@ func runNodeAttrRemove(path string, spec aclpolicy.NodeAttrSpec) (*result, error
 	res := newResult(commandNodeAttrRemove, statusNoChanges,
 		fmt.Sprintf("node attributes not present for target set in %s", path))
 	if edit.Changed() {
-		if err = aclpolicy.WritePatch(path, edit.Operations...); err != nil {
+		if err = files.WritePatch(path, edit.Operations...); err != nil {
 			return nil, err
 		}
 		res = newResult(commandNodeAttrRemove, statusOK,
@@ -1531,8 +1576,8 @@ func runNodeAttrRemove(path string, spec aclpolicy.NodeAttrSpec) (*result, error
 	return res, nil
 }
 
-func runNodeAttrRemoveAt(path string, index int) (*result, error) {
-	policy, err := loadForEdit(path)
+func runNodeAttrRemoveAt(files aclpolicy.Files, path string, index int) (*result, error) {
+	policy, err := loadForEdit(files, path)
 	if err != nil {
 		return nil, err
 	}
@@ -1540,7 +1585,7 @@ func runNodeAttrRemoveAt(path string, index int) (*result, error) {
 	if err != nil {
 		return nil, usageError{err}
 	}
-	if err = aclpolicy.WritePatch(path, edit.Operations...); err != nil {
+	if err = files.WritePatch(path, edit.Operations...); err != nil {
 		return nil, err
 	}
 	res := newResult(commandNodeAttrRemove,
@@ -1578,7 +1623,9 @@ func definitionCommand(kind aclpolicy.DefinitionKind, subcommand string) string 
 // already-parsed positional slice (see newTagOwnerAddCommand): pflag has
 // separated --comment/--overwrite-comment from TAG and OWNER, so an owner
 // name beginning with "-" needs a "--" terminator before it.
-func runTagOwnerAdd(path string, args []string, comment string, commentSet, overwriteComment bool) (*result, error) {
+func runTagOwnerAdd(
+	files aclpolicy.Files, path string, args []string, comment string, commentSet, overwriteComment bool,
+) (*result, error) {
 	if len(args) != 2 { //nolint:mnd // TAG and OWNER
 		return nil, usagef("usage: tsacl tag-owner add TAG OWNER")
 	}
@@ -1587,12 +1634,12 @@ func runTagOwnerAdd(path string, args []string, comment string, commentSet, over
 		return nil, err
 	}
 	tag, owner := args[0], args[1]
-	policy, err := loadForEdit(path)
+	policy, err := loadForEdit(files, path)
 	if err != nil {
 		return nil, err
 	}
 	if index := slices.Index(policy.TagOwners[tag], owner); index >= 0 {
-		return commentExistingOwner(path, comment, overwriteComment, tag, owner, index)
+		return commentExistingOwner(files, path, comment, overwriteComment, tag, owner, index)
 	}
 	var operation aclpolicy.PatchOperation
 	switch owners := policy.TagOwners[tag]; {
@@ -1609,7 +1656,7 @@ func runTagOwnerAdd(path string, args []string, comment string, commentSet, over
 		// three branches above leave the new owner.
 		operations = append(operations, commentPatch(comment, overwriteComment, "tagOwners", tag, "-"))
 	}
-	if err = aclpolicy.WritePatch(path, operations...); err != nil {
+	if err = files.WritePatch(path, operations...); err != nil {
 		return nil, err
 	}
 	res := newResult(commandTagOwnerAdd, statusOK, fmt.Sprintf("added owner %s to %s in %s", owner, tag, path))
@@ -1621,15 +1668,17 @@ func runTagOwnerAdd(path string, args []string, comment string, commentSet, over
 // commentExistingOwner handles "tag-owner add" for an owner the tag already
 // has. Without a comment that stays the no-op it has always been; with one, the
 // comment alone is the edit.
-func commentExistingOwner(path, comment string, overwrite bool, tag, owner string, index int) (*result, error) {
-	operations, err := commentOperations(path, comment, overwrite, "tagOwners", tag, strconv.Itoa(index))
+func commentExistingOwner(
+	files aclpolicy.Files, path, comment string, overwrite bool, tag, owner string, index int,
+) (*result, error) {
+	operations, err := commentOperations(files, path, comment, overwrite, "tagOwners", tag, strconv.Itoa(index))
 	if err != nil {
 		return nil, err
 	}
 	res := newResult(commandTagOwnerAdd, statusNoChanges,
 		fmt.Sprintf("owner %s already owns %s in %s", owner, tag, path))
 	if len(operations) > 0 {
-		if err = aclpolicy.WritePatch(path, operations...); err != nil {
+		if err = files.WritePatch(path, operations...); err != nil {
 			return nil, err
 		}
 		res = newResult(commandTagOwnerAdd, statusOK,
@@ -1643,7 +1692,9 @@ func commentExistingOwner(path, comment string, overwrite bool, tag, owner strin
 // runHostSet implements "host set NAME ADDRESS". See runTagOwnerAdd for why
 // args arrives already parsed and an ADDRESS beginning with "-" needs a "--"
 // terminator.
-func runHostSet(path string, args []string, comment string, commentSet, overwriteComment bool) (*result, error) {
+func runHostSet(
+	files aclpolicy.Files, path string, args []string, comment string, commentSet, overwriteComment bool,
+) (*result, error) {
 	if len(args) != 2 { //nolint:mnd // NAME and ADDRESS
 		return nil, usagef("usage: tsacl host set NAME ADDRESS")
 	}
@@ -1655,7 +1706,7 @@ func runHostSet(path string, args []string, comment string, commentSet, overwrit
 	if err = validateHostAddress(address); err != nil {
 		return nil, err
 	}
-	policy, err := loadForEdit(path)
+	policy, err := loadForEdit(files, path)
 	if err != nil {
 		return nil, err
 	}
@@ -1669,7 +1720,7 @@ func runHostSet(path string, args []string, comment string, commentSet, overwrit
 		}
 		operations = append(operations, operation)
 	}
-	commentOps, err := commentOperations(path, comment, overwriteComment, "hosts", name)
+	commentOps, err := commentOperations(files, path, comment, overwriteComment, "hosts", name)
 	if err != nil {
 		return nil, err
 	}
@@ -1678,7 +1729,7 @@ func runHostSet(path string, args []string, comment string, commentSet, overwrit
 	res := newResult(commandHostSet, statusNoChanges,
 		fmt.Sprintf("host %s already set to %s in %s", name, address, path))
 	if len(operations) > 0 {
-		if err = aclpolicy.WritePatch(path, operations...); err != nil {
+		if err = files.WritePatch(path, operations...); err != nil {
 			return nil, err
 		}
 		res = newResult(commandHostSet, statusOK, fmt.Sprintf("set host %s to %s in %s", name, address, path))
@@ -1709,6 +1760,7 @@ func validateHostAddress(address string) error {
 // validated before the file is touched, and an error-level diagnostic fails
 // the command with the file byte-identical.
 func runPostureSet(
+	files aclpolicy.Files,
 	path string, args []string, comment string, commentSet, overwriteComment bool, stderr io.Writer,
 ) (*result, error) {
 	if len(args) < 2 { //nolint:mnd // NAME and at least one EXPR required
@@ -1726,7 +1778,7 @@ func runPostureSet(
 	if err = validatePostureExpressions(canonical, exprs, stderr); err != nil {
 		return nil, err
 	}
-	policy, err := loadForEdit(path)
+	policy, err := loadForEdit(files, path)
 	if err != nil {
 		return nil, err
 	}
@@ -1741,7 +1793,7 @@ func runPostureSet(
 		}
 		operations = append(operations, operation)
 	}
-	commentOps, err := commentOperations(path, comment, overwriteComment, "postures", canonical)
+	commentOps, err := commentOperations(files, path, comment, overwriteComment, "postures", canonical)
 	if err != nil {
 		return nil, err
 	}
@@ -1750,7 +1802,7 @@ func runPostureSet(
 	res := newResult(commandPostureSet, statusNoChanges,
 		fmt.Sprintf("posture %s already set in %s", canonical, path))
 	if len(operations) > 0 {
-		if err = aclpolicy.WritePatch(path, operations...); err != nil {
+		if err = files.WritePatch(path, operations...); err != nil {
 			return nil, err
 		}
 		res = newResult(commandPostureSet, statusOK, fmt.Sprintf("set posture %s in %s", canonical, path))
@@ -1789,7 +1841,7 @@ func validatePostureExpressions(name string, exprs []string, stderr io.Writer) e
 	return nil
 }
 
-func runPostureRemove(path string, args []string) (*result, error) {
+func runPostureRemove(files aclpolicy.Files, path string, args []string) (*result, error) {
 	if len(args) != 1 {
 		return nil, usagef("usage: tsacl posture remove NAME")
 	}
@@ -1797,7 +1849,7 @@ func runPostureRemove(path string, args []string) (*result, error) {
 	if err != nil {
 		return nil, usageError{err}
 	}
-	policy, err := loadForEdit(path)
+	policy, err := loadForEdit(files, path)
 	if err != nil {
 		return nil, err
 	}
@@ -1809,7 +1861,7 @@ func runPostureRemove(path string, args []string) (*result, error) {
 		return res, nil
 	}
 	// Remove the member, then prune "postures" if nothing is left — see runGrantRemove.
-	if err = aclpolicy.WritePatch(
+	if err = files.WritePatch(
 		path, aclpolicy.PatchRemove("postures", canonical), aclpolicy.PatchPruneEmpty("postures"),
 	); err != nil {
 		return nil, err
@@ -1862,6 +1914,7 @@ func editedRoute(route string) []editedValue {
 // into an existing route entry rather than replacing it, and a repeat is a
 // no-op — see aclpolicy.AddRouteApprovers.
 func runAutoApproverAdd(
+	files aclpolicy.Files,
 	path, route string,
 	exitNode bool,
 	approvers []string,
@@ -1879,7 +1932,7 @@ func runAutoApproverAdd(
 	if len(approvers) == 0 {
 		return nil, usagef("auto-approver add requires at least one --approver")
 	}
-	policy, err := loadForEdit(path)
+	policy, err := loadForEdit(files, path)
 	if err != nil {
 		return nil, err
 	}
@@ -1897,7 +1950,7 @@ func runAutoApproverAdd(
 	// spelling, and the comment has to name the member the patch actually
 	// touched.
 	commentOps, err := commentOperations(
-		path, comment, overwriteComment, aclpolicy.AutoApproverSegments(edit.Route)...)
+		files, path, comment, overwriteComment, aclpolicy.AutoApproverSegments(edit.Route)...)
 	if err != nil {
 		return nil, err
 	}
@@ -1907,7 +1960,7 @@ func runAutoApproverAdd(
 	res := newResult(commandAutoApproverAdd, statusNoChanges,
 		fmt.Sprintf("approvers already present for %s in %s", name, path))
 	if len(operations) > 0 {
-		if err = aclpolicy.WritePatch(path, operations...); err != nil {
+		if err = files.WritePatch(path, operations...); err != nil {
 			return nil, err
 		}
 		// An approver the list already carries produces no edit operation, so a
@@ -1928,7 +1981,9 @@ func runAutoApproverAdd(
 // runAutoApproverRemove implements "auto-approver remove". Removing the last
 // approver of a route prunes the route key rather than leaving an empty list
 // behind — see aclpolicy.RemoveRouteApprovers.
-func runAutoApproverRemove(path, route string, exitNode bool, approvers []string) (*result, error) {
+func runAutoApproverRemove(
+	files aclpolicy.Files, path, route string, exitNode bool, approvers []string,
+) (*result, error) {
 	target, err := resolveAutoApproverTarget(commandAutoApproverRemove, route, exitNode)
 	if err != nil {
 		return nil, err
@@ -1936,7 +1991,7 @@ func runAutoApproverRemove(path, route string, exitNode bool, approvers []string
 	if len(approvers) == 0 {
 		return nil, usagef("auto-approver remove requires at least one --approver")
 	}
-	policy, err := loadForEdit(path)
+	policy, err := loadForEdit(files, path)
 	if err != nil {
 		return nil, err
 	}
@@ -1953,7 +2008,7 @@ func runAutoApproverRemove(path, route string, exitNode bool, approvers []string
 	res := newResult(commandAutoApproverRemove, statusNoChanges,
 		fmt.Sprintf("approvers not present for %s in %s", name, path))
 	if edit.Changed() {
-		if err = aclpolicy.WritePatch(path, edit.Operations...); err != nil {
+		if err = files.WritePatch(path, edit.Operations...); err != nil {
 			return nil, err
 		}
 		res = newResult(commandAutoApproverRemove, statusOK,
@@ -1967,15 +2022,16 @@ func runAutoApproverRemove(path, route string, exitNode bool, approvers []string
 // loadForEdit validates the complete typed policy before a raw HuJSON patch is
 // selected and written. DisallowUnknownFields makes this the data-loss guard:
 // an edit cannot silently discard policy data the pinned schema does not model.
-func loadForEdit(path string) (*aclpolicy.Policy, error) {
-	return aclpolicy.Load(path)
+func loadForEdit(files aclpolicy.Files, path string) (*aclpolicy.Policy, error) {
+	return files.Load(path)
 }
 
 func runTestAdd(
+	files aclpolicy.Files,
 	path, source string, deny, accept []string, postureAttrFlags []string, stderr io.Writer,
 ) (*result, error) {
 	return runTestEdit(
-		commandTestAdd, path, source, deny, accept, postureAttrFlags, stderr,
+		files, commandTestAdd, path, source, deny, accept, postureAttrFlags, stderr,
 		aclpolicy.AddAssertions,
 		"test assertions already present in %s",
 		"added %d test assertion(s) to %s",
@@ -1983,10 +2039,11 @@ func runTestAdd(
 }
 
 func runTestRemove(
+	files aclpolicy.Files,
 	path, source string, deny, accept []string, postureAttrFlags []string, stderr io.Writer,
 ) (*result, error) {
 	return runTestEdit(
-		commandTestRemove, path, source, deny, accept, postureAttrFlags, stderr,
+		files, commandTestRemove, path, source, deny, accept, postureAttrFlags, stderr,
 		aclpolicy.RemoveAssertions,
 		"test assertions not present in %s",
 		"removed %d test assertion(s) from %s",
@@ -1998,6 +2055,7 @@ func runTestRemove(
 // the file only when it changed. The apply argument is the one difference
 // between the two commands.
 func runTestEdit(
+	files aclpolicy.Files,
 	command, path, source string,
 	deny, accept []string,
 	postureAttrFlags []string,
@@ -2018,7 +2076,7 @@ func runTestEdit(
 	for _, warning := range aclpolicy.PostureAttrWarnings(attrs) {
 		fmt.Fprintln(stderr, "tsacl: warning:", warning)
 	}
-	policy, err := loadForEdit(path)
+	policy, err := loadForEdit(files, path)
 	if err != nil {
 		return nil, err
 	}
@@ -2029,7 +2087,7 @@ func runTestEdit(
 	status := statusNoChanges
 	message := fmt.Sprintf(noChangeFormat, path)
 	if edit.Changed() {
-		if err = aclpolicy.WritePatch(path, edit.Operations...); err != nil {
+		if err = files.WritePatch(path, edit.Operations...); err != nil {
 			return nil, err
 		}
 		status = statusOK
@@ -2082,11 +2140,13 @@ func commentPatch(comment string, overwrite bool, segments ...string) aclpolicy.
 // Whether this is a change is decided from the same LeadingComments the writer
 // suppresses duplicates with, so a command cannot report a change for a write
 // that changed nothing.
-func commentOperations(path, comment string, overwrite bool, segments ...string) ([]aclpolicy.PatchOperation, error) {
+func commentOperations(
+	files aclpolicy.Files, path, comment string, overwrite bool, segments ...string,
+) ([]aclpolicy.PatchOperation, error) {
 	if comment == "" {
 		return nil, nil
 	}
-	existing, err := aclpolicy.LeadingComments(path, segments...)
+	existing, err := files.LeadingComments(path, segments...)
 	if err != nil {
 		return nil, err
 	}
@@ -2110,7 +2170,7 @@ type mergeRequest struct {
 	write func(path string, data []byte) error
 }
 
-func runMerge(req mergeRequest) (*result, error) {
+func runMerge(files aclpolicy.Files, req mergeRequest) (*result, error) {
 	pair := req.base != "" || req.add != ""
 	switch {
 	case pair && len(req.dirs) != 0:
@@ -2125,13 +2185,13 @@ func runMerge(req mergeRequest) (*result, error) {
 		write = aclpolicy.WriteRaw
 	}
 	if pair {
-		return runMergePair(req.base, req.add, req.out, write)
+		return runMergePair(files, req.base, req.add, req.out, write)
 	}
 	path := req.out
 	if path == "" {
 		path = req.file
 	}
-	data, paths, err := aclpolicy.MergeDirectories(req.dirs, path)
+	data, paths, err := files.MergeDirectories(req.dirs, path)
 	if err != nil {
 		return nil, err
 	}
@@ -2148,11 +2208,11 @@ func runMerge(req mergeRequest) (*result, error) {
 // runMergePair deep-merges one snippet into a base policy and, unlike the
 // directory path, keeps the HuJSON comments and layout of both inputs. It is
 // the reconciliation step after a stale-ETag upload refusal.
-func runMergePair(base, add, out string, write func(string, []byte) error) (*result, error) {
+func runMergePair(files aclpolicy.Files, base, add, out string, write func(string, []byte) error) (*result, error) {
 	if out == "" {
 		out = base
 	}
-	data, err := aclpolicy.MergePair(base, add)
+	data, err := files.MergePair(base, add)
 	if err != nil {
 		return nil, err
 	}
@@ -2166,10 +2226,10 @@ func runMergePair(base, add, out string, write func(string, []byte) error) (*res
 	return res, nil
 }
 
-func runNormalize(path string) (*result, error) {
-	standard, err := aclpolicy.Normalize(path)
+func runNormalize(files aclpolicy.Files, path string) (*result, error) {
+	standard, err := files.Normalize(path)
 	if err != nil {
-		return nil, usagef("could not normalize policy: %v", err)
+		return nil, usagef("could not normalize policy: %w", err)
 	}
 	res := newResult(cmdNormalize, statusOK, fmt.Sprintf("normalized %s", path))
 	res.File = path
@@ -2205,7 +2265,7 @@ func runValidate(
 	if err != nil {
 		return nil, err
 	}
-	validation, err := tailapi.ValidateFile(ctx, client, opts.file)
+	validation, err := tailapi.ValidateFile(ctx, client, opts.policyFiles(), opts.file)
 	err = tailapi.WrapOAuthError(err, tailapi.ScopePolicyFileRead, opts.oauthClientID, opts.oauthClientSecret)
 	status := validationEnvelopeStatus(err)
 	if status == "" {
@@ -2308,13 +2368,13 @@ func watchTests(
 ) error {
 	// A file unreadable at startup is a caller mistake — a typo in --file — not a
 	// transient mid-save state. Fail loudly rather than polling a path forever.
-	seed, err := os.ReadFile(opts.file)
+	seed, err := opts.policyFiles().Limits.ReadFile(opts.file)
 	if err != nil {
-		return usagef("could not read policy for watch: %v", err)
+		return usagef("could not read policy for watch: %w", err)
 	}
 	logger.InfoContext(ctx, "watching policy file",
 		"file", opts.file, "interval", testOpts.interval)
-	poller := newStablePolicyPoller(opts.file, seed)
+	poller := newStablePolicyPoller(opts.policyFiles(), opts.file, seed)
 
 	ticker := time.NewTicker(testOpts.interval)
 	defer ticker.Stop()
@@ -2365,6 +2425,7 @@ func watchTests(
 // between plain --watch and --watch --validate; a change to the debounce is a
 // change to one function, not two that only look alike.
 type stablePolicyPoller struct {
+	files      aclpolicy.Files
 	file       string
 	pending    string
 	last       string
@@ -2373,8 +2434,8 @@ type stablePolicyPoller struct {
 
 // newStablePolicyPoller seeds pending from the startup read, which lets an
 // already-stable file reach its first verdict after one tick instead of two.
-func newStablePolicyPoller(file string, seed []byte) *stablePolicyPoller {
-	return &stablePolicyPoller{file: file, pending: policyDigest(seed)}
+func newStablePolicyPoller(files aclpolicy.Files, file string, seed []byte) *stablePolicyPoller {
+	return &stablePolicyPoller{files: files, file: file, pending: policyDigest(seed)}
 }
 
 // poll reports the newest stable, not-yet-graded snapshot and whether one
@@ -2385,7 +2446,7 @@ func newStablePolicyPoller(file string, seed []byte) *stablePolicyPoller {
 // so the caller owns them outright — which is what lets --validate hash,
 // evaluate, and POST one slice without copying it first.
 func (p *stablePolicyPoller) poll(ctx context.Context, logger *slog.Logger) ([]byte, string, bool) {
-	raw, err := os.ReadFile(p.file) //nolint:gosec // p.file is the operator's --file; reading it is the command.
+	raw, err := p.files.Limits.ReadFile(p.file)
 	if err != nil {
 		if !p.readFailed {
 			logger.WarnContext(ctx, "cannot read policy file", "file", p.file, "error", err)
@@ -2437,15 +2498,15 @@ func watchValidatedTests(
 	emitter *streamEmitter,
 	client *tailscale.Client,
 ) error {
-	seed, err := os.ReadFile(opts.file)
+	seed, err := opts.policyFiles().Limits.ReadFile(opts.file)
 	if err != nil {
-		return usagef("could not read policy for watch: %v", err)
+		return usagef("could not read policy for watch: %w", err)
 	}
 	logger.InfoContext(
 		ctx, "watching policy file with server validation",
 		"file", opts.file, "interval", testOpts.interval,
 	)
-	poller := newStablePolicyPoller(opts.file, seed)
+	poller := newStablePolicyPoller(opts.policyFiles(), opts.file, seed)
 	var active, queued *validatedSnapshot
 	var activeSuperseded bool
 	var cancel context.CancelFunc
@@ -2672,9 +2733,9 @@ func policyDigest(raw []byte) string {
 
 // evaluatePolicyTests reads opts.file and grades its assertions.
 func evaluatePolicyTests(ctx context.Context, opts options, logger *slog.Logger) (*result, error) {
-	raw, err := aclpolicy.ReadRaw(opts.file)
+	raw, err := opts.policyFiles().ReadRaw(opts.file)
 	if err != nil {
-		return nil, usagef("could not load policy tests: %v", err)
+		return nil, usagef("could not load policy tests: %w", err)
 	}
 	return evaluatePolicyTestBytes(ctx, opts, raw, logger)
 }
@@ -2691,7 +2752,7 @@ func evaluatePolicyTestBytes(
 	path := opts.file
 	policy, err := aclpolicy.LoadBytes(path, raw)
 	if err != nil {
-		return nil, usagef("could not load policy tests: %v", err)
+		return nil, usagef("could not load policy tests: %w", err)
 	}
 	var roster map[string]tailscale.UserRole
 	if opts.roster != "" {
@@ -2789,9 +2850,9 @@ func runCheck(
 	postureAttrsComplete bool,
 	logger *slog.Logger,
 ) (*result, error) {
-	policy, err := aclpolicy.Load(opts.file)
+	policy, err := opts.policyFiles().Load(opts.file)
 	if err != nil {
-		return nil, usagef("could not load policy for check: %v", err)
+		return nil, usagef("could not load policy for check: %w", err)
 	}
 	var roster map[string]tailscale.UserRole
 	if opts.roster != "" {
@@ -2979,15 +3040,15 @@ func runLint(
 	logger *slog.Logger,
 ) (*result, error) {
 	if configPath != "" {
-		config, err := aclpolicy.LoadLintConfig(configPath)
+		config, err := opts.policyFiles().LoadLintConfig(configPath)
 		if err != nil {
-			return nil, usagef("could not load lint config: %v", err)
+			return nil, usagef("could not load lint config: %w", err)
 		}
 		lintOpts.AllowBroadDestinations = config.Checks.BroadRuleUntested.AllowBroad
 	}
-	policy, err := aclpolicy.Load(opts.file)
+	policy, err := opts.policyFiles().Load(opts.file)
 	if err != nil {
-		return nil, usagef("could not load policy for lint: %v", err)
+		return nil, usagef("could not load policy for lint: %w", err)
 	}
 	report, err := aclpolicy.EvaluatePolicyLint(policy, lintOpts)
 	if err != nil {
@@ -3111,7 +3172,7 @@ func lintOnline(
 		report.Add(aclpolicy.EvaluateServiceExistence(serviceRefs, serviceExists)...)
 	}
 
-	warnings, err := collectSCIMSyncWarnings(ctx, client, opts.file, opts.oauthClientSecret, logger)
+	warnings, err := collectSCIMSyncWarnings(ctx, client, opts.policyFiles(), opts.file, opts.oauthClientSecret, logger)
 	if err != nil {
 		return err
 	}
@@ -3130,11 +3191,12 @@ func lintOnline(
 func collectSCIMSyncWarnings(
 	ctx context.Context,
 	client *tailscale.Client,
+	files aclpolicy.Files,
 	path string,
 	clientSecret string,
 	logger *slog.Logger,
 ) ([]string, error) {
-	result, err := tailapi.ValidateFile(ctx, client, path)
+	result, err := tailapi.ValidateFile(ctx, client, files, path)
 	// Redact before the error can be returned to realMain or handed to the
 	// logger. This is the one control-plane call whose error reaches stderr
 	// without passing through WrapOAuthError, and a token-endpoint failure
@@ -3391,7 +3453,7 @@ func runPlan(
 	if err != nil {
 		return nil, err
 	}
-	plan, err := tailapi.PlanFile(ctx, client, opts.file)
+	plan, err := tailapi.PlanFile(ctx, client, opts.policyFiles(), opts.file)
 	err = tailapi.WrapOAuthError(err, tailapi.ScopePolicyFileRead, opts.oauthClientID, opts.oauthClientSecret)
 	// Warnings the control plane did supply are reported even when a later step
 	// fails, so a diagnostic already collected is never silently discarded.
@@ -3504,7 +3566,7 @@ func runUpload(
 	if opts.ifMatch, err = resolveUploadETag(opts, ifMatchExplicit, acceptRemoteChanges); err != nil {
 		return nil, err
 	}
-	uploaded, err := tailapi.UploadFile(ctx, client, opts.file, opts.ifMatch)
+	uploaded, err := tailapi.UploadFile(ctx, client, opts.policyFiles(), opts.file, opts.ifMatch)
 	err = tailapi.WrapOAuthError(err, tailapi.ScopePolicyFile, opts.oauthClientID, opts.oauthClientSecret)
 	if err != nil {
 		if isPreconditionFailed(err) {

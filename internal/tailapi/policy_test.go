@@ -16,6 +16,7 @@ import (
 
 	tailscale "tailscale.com/client/tailscale/v2"
 
+	"github.com/rshade/tsacl/internal/aclpolicy"
 	"github.com/rshade/tsacl/internal/tailapi"
 )
 
@@ -51,10 +52,10 @@ func TestUploadAndValidateFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err = tailapi.ValidateFile(context.Background(), client, path); err != nil {
+	if _, err = tailapi.ValidateFile(context.Background(), client, aclpolicy.Files{}, path); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = tailapi.UploadFile(context.Background(), client, path, `"etag"`); err != nil {
+	if _, err = tailapi.UploadFile(context.Background(), client, aclpolicy.Files{}, path, `"etag"`); err != nil {
 		t.Fatal(err)
 	}
 	want := []string{
@@ -266,7 +267,7 @@ func TestUploadFileReturnsResponseETagAndExactBytes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	uploaded, err := tailapi.UploadFile(context.Background(), client, path, `"etag-old"`)
+	uploaded, err := tailapi.UploadFile(context.Background(), client, aclpolicy.Files{}, path, `"etag-old"`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -319,9 +320,11 @@ func TestFetchPolicyReportsNonSuccess(t *testing.T) {
 func TestPlanFileReturnsValidatedUnifiedDiffAndETag(t *testing.T) {
 	t.Parallel()
 	path := filepath.Join(t.TempDir(), "candidate.hujson")
-	if err := os.WriteFile(path, []byte(`{
-		"grants": [{"src": ["*"], "dst": ["tag:web"], "ip": ["tcp:443"]}],
-	}`), 0o644); err != nil {
+	// Formatting rewrites the four-space indent to a tab inside the buffer the
+	// file was read into, so a candidate formatted before it was submitted
+	// fails the exact-bytes check below.
+	const candidate = "{\n    \"grants\": [{\"src\": [\"*\"], \"dst\": [\"tag:web\"], \"ip\": [\"tcp:443\"]}],\n}\n"
+	if err := os.WriteFile(path, []byte(candidate), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -337,8 +340,8 @@ func TestPlanFileReturnsValidatedUnifiedDiffAndETag(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
-			if !strings.Contains(string(body), `"tag:web"`) {
-				t.Errorf("validation body = %q, want candidate policy", body)
+			if string(body) != candidate {
+				t.Errorf("validation body = %q, want the candidate's exact bytes %q", body, candidate)
 			}
 		default:
 			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
@@ -356,7 +359,7 @@ func TestPlanFileReturnsValidatedUnifiedDiffAndETag(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	plan, err := tailapi.PlanFile(context.Background(), client, path)
+	plan, err := tailapi.PlanFile(context.Background(), client, aclpolicy.Files{}, path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -401,7 +404,7 @@ func TestPlanFileReportsNoChangesForMatchingPolicy(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	plan, err := tailapi.PlanFile(context.Background(), client, path)
+	plan, err := tailapi.PlanFile(context.Background(), client, aclpolicy.Files{}, path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -434,7 +437,7 @@ func TestPlanFileStopsOnValidationFailure(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	plan, err := tailapi.PlanFile(context.Background(), client, path)
+	plan, err := tailapi.PlanFile(context.Background(), client, aclpolicy.Files{}, path)
 	if err == nil || !strings.Contains(err.Error(), "test(s) failed") {
 		t.Fatalf("error = %v, want policy-test failure", err)
 	}

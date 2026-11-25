@@ -16,12 +16,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 
+	"github.com/rshade/ax-go/config"
 	"github.com/tailscale/hujson"
+
+	"github.com/rshade/tsacl/pkg/policycore/errcode"
+	"github.com/rshade/tsacl/pkg/policycore/internal/coded"
 )
 
 // defaultFileMode is applied to files that do not already exist.
@@ -97,19 +102,88 @@ func JSONPointer(segments ...string) string {
 // exactly as authored.
 type ResolveKey func(document hujson.Value, canonical string) string
 
-// ParseFile reads path and parses it as HuJSON (a superset of JSON, so plain
-// JSON files parse too).
-func ParseFile(path string) (hujson.Value, error) {
-	b, err := os.ReadFile(path)
+// DefaultMaxBytes is the read limit of the zero [Options]: 16 MiB. It is
+// larger than ax-go's 1 MiB config.DefaultMaxBytes because a tailnet policy is
+// not a tool config, and production policies of several megabytes exist.
+const DefaultMaxBytes int64 = 16 << 20
+
+// Options configures how this package reads files. The zero value reads
+// with the DefaultMaxBytes limit, and the package-level ParseFile,
+// WritePatch, and LeadingComments use it.
+type Options struct {
+	// MaxBytes caps every file read, matching ax-go's config.WithMaxBytes up
+	// to config.MaxBytesCeiling. Zero means DefaultMaxBytes. A file of
+	// exactly MaxBytes is accepted; a larger one fails with config_too_large.
+	// A negative value, or one above the ceiling, fails with
+	// config_max_bytes_invalid before the file is opened.
+	MaxBytes int64
+}
+
+func (o Options) maxBytes() (int64, error) {
+	switch {
+	case o.MaxBytes == 0:
+		return DefaultMaxBytes, nil
+	case o.MaxBytes < 0 || o.MaxBytes > config.MaxBytesCeiling:
+		return 0, coded.Errorf(errcode.ConfigMaxBytesInvalid,
+			"config max bytes must be between 0 and %d", config.MaxBytesCeiling)
+	default:
+		return o.MaxBytes, nil
+	}
+}
+
+// ReadFile returns the bytes of path, unparsed, under the read limit, so a
+// caller that decodes the document itself bounds it exactly as ParseFile
+// does. A failure to open or read the file is returned as the underlying
+// error, which still satisfies [errors.Is](err, fs.ErrNotExist) for a missing
+// file.
+func (o Options) ReadFile(path string) ([]byte, error) {
+	limit, err := o.maxBytes()
+	if err != nil {
+		return nil, err
+	}
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = file.Close() }()
+	// One byte past the limit is the tripwire: reading it proves the file is
+	// too large without reading the rest.
+	data, err := io.ReadAll(io.LimitReader(file, limit+1))
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(data)) > limit {
+		return nil, coded.Errorf(errcode.ConfigTooLarge,
+			"%s: config exceeds maximum size of %d bytes", path, limit)
+	}
+	return data, nil
+}
+
+// ParseFile reads path under the read limit and parses it as HuJSON (a
+// superset of JSON, so plain JSON files parse too). A document that does not
+// parse fails with config_invalid.
+func (o Options) ParseFile(path string) (hujson.Value, error) {
+	data, err := o.ReadFile(path)
 	if err != nil {
 		return hujson.Value{}, err
 	}
-	value, err := hujson.Parse(b)
+	return Parse(path, data)
+}
+
+// Parse parses a document the caller already holds, such as bytes from
+// [Options.ReadFile] that the caller also needs verbatim. name appears only in
+// the error text, which matches ParseFile's for a file at that path: a
+// document that does not parse fails with config_invalid.
+func Parse(name string, data []byte) (hujson.Value, error) {
+	value, err := hujson.Parse(data)
 	if err != nil {
-		return hujson.Value{}, fmt.Errorf("%s: %w", path, err)
+		return hujson.Value{}, coded.Errorf(errcode.ConfigInvalid, "%s: %w", name, err)
 	}
 	return value, nil
 }
+
+// ParseFile is [Options.ParseFile] with the default read limit.
+func ParseFile(path string) (hujson.Value, error) { return Options{}.ParseFile(path) }
 
 // WritePatch atomically applies comment-preserving RFC 6902 operations to a
 // JSON or HuJSON document at path, then authors any comments those
@@ -120,13 +194,19 @@ func ParseFile(path string) (hujson.Value, error) {
 // the whole patch succeeded: an operation that fails leaves the file exactly
 // as it was.
 func WritePatch(path string, resolve ResolveKey, operations ...PatchOperation) error {
-	data, err := os.ReadFile(path)
+	return Options{}.WritePatch(path, resolve, operations...)
+}
+
+// WritePatch is the package-level WritePatch with o's read limit. A file over
+// the limit is never rewritten.
+func (o Options) WritePatch(path string, resolve ResolveKey, operations ...PatchOperation) error {
+	data, err := o.ReadFile(path)
 	if err != nil {
 		return err
 	}
 	patched, err := PatchBytes(data, resolve, operations...)
 	if err != nil {
-		return fmt.Errorf("%s: %w", path, err)
+		return coded.Boundary(fmt.Errorf("%s: %w", path, err))
 	}
 	return WriteRaw(path, patched)
 }
@@ -146,9 +226,17 @@ func WritePatch(path string, resolve ResolveKey, operations ...PatchOperation) e
 // simply dropped, so there is no window in which the file holds it and no
 // restore that can itself fail.
 func PatchBytes(data []byte, resolve ResolveKey, operations ...PatchOperation) ([]byte, error) {
+	patched, err := patchBytes(data, resolve, operations)
+	if err != nil {
+		return nil, coded.Boundary(err)
+	}
+	return patched, nil
+}
+
+func patchBytes(data []byte, resolve ResolveKey, operations []PatchOperation) ([]byte, error) {
 	value, err := hujson.Parse(data)
 	if err != nil {
-		return nil, err
+		return nil, coded.New(errcode.ConfigInvalid, err)
 	}
 	// json.RawMessage rather than any: omitempty must track hasValue exactly.
 	// On an any field omitempty omits only a nil interface, so PatchAdd(nil)
@@ -191,7 +279,7 @@ func PatchBytes(data []byte, resolve ResolveKey, operations ...PatchOperation) (
 		return nil, fmt.Errorf("encoding patch: %w", err)
 	}
 	if err = value.Patch(rawPatch); err != nil {
-		return nil, fmt.Errorf("applying patch: %w", err)
+		return nil, coded.Errorf(errcode.ConfigPatchInvalid, "applying patch: %w", err)
 	}
 	if err = applyPrunes(&value, resolve, operations); err != nil {
 		return nil, err
@@ -223,7 +311,7 @@ func applyPrunes(value *hujson.Value, resolve ResolveKey, operations []PatchOper
 			return fmt.Errorf("encoding prune: %w", err)
 		}
 		if err = value.Patch(raw); err != nil {
-			return fmt.Errorf("pruning %s: %w", JSONPointer(segments...), err)
+			return coded.Errorf(errcode.ConfigPatchInvalid, "pruning %s: %w", JSONPointer(segments...), err)
 		}
 	}
 	return nil
@@ -295,7 +383,7 @@ func applyComments(value *hujson.Value, resolve ResolveKey, operations []PatchOp
 			return fmt.Errorf("commenting: %w", err)
 		}
 		if !found {
-			return fmt.Errorf("commenting: no node at %s", JSONPointer(segments...))
+			return coded.Errorf(errcode.ConfigPatchInvalid, "commenting: no node at %s", JSONPointer(segments...))
 		}
 		switch {
 		case operation.commentOverwrite:

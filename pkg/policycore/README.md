@@ -28,7 +28,14 @@ repeated site ID is intentional; callers own those classifications.
 The `hujsonedit` subpackage applies schema-agnostic, comment-preserving RFC
 6902 edits to HuJSON documents. It carries no knowledge of any particular
 document's fields; `tsacl` and `tsipam` both build their typed edits on
-it.
+it. Its file reads are bounded at 16 MiB by default (`DefaultMaxBytes`), room
+for production policies of several megabytes; `hujsonedit.Options` sets a
+different limit.
+
+Errors that bad input causes share one machine-readable shape: each unwraps to
+an ax-go `*contract.Error` with a stable `error_code` from the `errcode`
+subpackage, a fixed actionable fix, exit code 2, and unchanged message text.
+The [error contract](docs/public-api.md#error-contract) lists every code.
 
 The `posture` subpackage parses, validates, and evaluates Tailscale
 device-posture rule expressions. It is stdlib-only and three-valued: an

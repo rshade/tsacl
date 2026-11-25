@@ -3,9 +3,9 @@ module github.com/rshade/tsacl
 go 1.27.4
 
 require (
-	github.com/hexops/gotextdiff v1.0.3
 	github.com/itchyny/gojq v0.12.20
 	github.com/jaxxstorm/tscli v0.12.0
+	github.com/rogpeppe/go-internal v1.16.0
 	github.com/rs/zerolog v1.35.1
 	github.com/rshade/ax-go v0.10.0
 	github.com/spf13/cobra v1.10.2

@@ -4,18 +4,25 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/rshade/ax-go"
+
 	"github.com/rshade/tsacl/internal/tailapi"
+	"github.com/rshade/tsacl/pkg/policycore"
+	"github.com/rshade/tsacl/pkg/policycore/errcode"
 )
 
 type axErrorLine struct {
 	ErrorCode         string `json:"error_code"`
 	Message           string `json:"message"`
+	TraceID           string `json:"trace_id"`
 	Tool              string `json:"tool"`
+	Version           string `json:"version"`
 	Retryable         *bool  `json:"retryable"`
 	RetryAfterSeconds int64  `json:"retry_after_seconds"`
 }
@@ -83,6 +90,81 @@ func TestAxErrorForClassifiesErrors(t *testing.T) {
 				(got.Retryable != nil && *got.Retryable) != testCase.retryable || got.RetryAfterSeconds != testCase.retryIn {
 				t.Errorf("axErrorFor = %+v (exit %d), want code %q exit %d retryable %v retry %d",
 					got, got.ExitCode(), testCase.wantCode, testCase.wantExit, testCase.retryable, testCase.retryIn)
+			}
+		})
+	}
+}
+
+func TestAxErrorForKeepsATopLevelEnvelope(t *testing.T) {
+	t.Parallel()
+	top := ax.NewError(context.Background(), "confirmation_required", "confirm with --yes",
+		ax.WithErrorExitCode(exitUsage))
+	if got := axErrorFor(context.Background(), top); got != top {
+		t.Errorf("axErrorFor rebuilt a top-level envelope: %+v", got)
+	}
+}
+
+func TestAxErrorForAdoptsANestedLibraryError(t *testing.T) {
+	t.Parallel()
+	_, rosterErr := policycore.ParseRoster([]byte(`{"Ada@example.com": "admin", "ada@example.com": "member"}`))
+	err := usagef("could not load --roster r.json: %w", rosterErr)
+
+	got := axErrorFor(context.Background(), err, ax.WithErrorContext(map[string]any{"verdict": "x"}))
+
+	if got.ErrorCode != errcode.RosterEntryInvalid {
+		t.Errorf("ErrorCode = %q, want %q", got.ErrorCode, errcode.RosterEntryInvalid)
+	}
+	if got.Message != err.Error() || !strings.HasPrefix(got.Message, "could not load --roster r.json: roster:") {
+		t.Errorf("Message = %q, want the full top-level text %q", got.Message, err.Error())
+	}
+	if got.Tool != toolName || got.ExitCode() != exitUsage {
+		t.Errorf("tool %q exit %d, want %q and %d", got.Tool, got.ExitCode(), toolName, exitUsage)
+	}
+	if got.ActionableFix != errcode.Fix(errcode.RosterEntryInvalid) {
+		t.Errorf("ActionableFix = %q, want the library fix", got.ActionableFix)
+	}
+	if got.Retryable == nil || *got.Retryable {
+		t.Errorf("Retryable = %v, want an explicit false", got.Retryable)
+	}
+	if got.Context["verdict"] != "x" {
+		t.Errorf("Context = %v, want the caller's extra options applied", got.Context)
+	}
+}
+
+func TestAxErrorForDoesNotCopyNestedContextOrSuggestions(t *testing.T) {
+	t.Parallel()
+	nested := ax.NewError(context.Background(), errCodeValidation, "secret ada@example.com",
+		ax.WithErrorContext(map[string]any{"login": "ada@example.com"}),
+		ax.WithSuggestions("email ada@example.com"))
+	got := axErrorFor(context.Background(), fmt.Errorf("scrubbed: %w", nested))
+	if got.Message != "scrubbed: secret ada@example.com" {
+		t.Errorf("Message = %q, want the top-level text", got.Message)
+	}
+	if len(got.Context) != 0 || len(got.Suggestions) != 0 {
+		t.Errorf("Context = %v, Suggestions = %v, want neither copied", got.Context, got.Suggestions)
+	}
+}
+
+func TestExitCodePrecedenceOverLibraryErrors(t *testing.T) {
+	t.Parallel()
+	_, libraryErr := policycore.ResolveIPSet("ipset:missing", nil)
+	testCases := []struct {
+		name string
+		err  error
+		want int
+	}{
+		{"a lone library error exits 2", libraryErr, exitUsage},
+		{"a wrapped library error exits 2", fmt.Errorf("could not resolve: %w", libraryErr), exitUsage},
+		{"indeterminate wins over a library error",
+			fmt.Errorf("%w: %w", errReachabilityIndeterminate, libraryErr), exitIndeterminate},
+		{"a runtime exit status wins over a library error",
+			fmt.Errorf("%w: %w", exitStatusError{code: 3}, libraryErr), 3},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			if got := exitCode(testCase.err); got != testCase.want {
+				t.Errorf("exitCode = %d, want %d", got, testCase.want)
 			}
 		})
 	}

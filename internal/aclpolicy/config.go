@@ -17,8 +17,11 @@ type BroadRuleUntestedConfig struct {
 
 // LoadLintConfig reads a JSON or HuJSON lint config. Unknown fields are
 // rejected so a misspelled exclusion cannot silently look effective.
-func LoadLintConfig(path string) (*LintConfig, error) {
-	raw, err := ReadRaw(path)
+func LoadLintConfig(path string) (*LintConfig, error) { return Files{}.LoadLintConfig(path) }
+
+// LoadLintConfig is the package-level LoadLintConfig under f's read limit.
+func (f Files) LoadLintConfig(path string) (*LintConfig, error) {
+	raw, err := f.ReadRaw(path)
 	if err != nil {
 		return nil, err
 	}

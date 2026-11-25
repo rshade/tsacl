@@ -50,11 +50,24 @@ func normalizeArg(known map[string]bool, arg string) string {
 	return "-" + arg
 }
 
-// knownLongFlags collects every long flag name in the tree. Cobra registers
-// help lazily, on whichever command it dispatches, so each command is
-// initialized here to keep "-help" rewritable no matter where it appears.
+// axExecuteFlags names the persistent flags ax-go's ax.Execute registers on
+// the root. It registers them after a caller has already normalized its
+// arguments, so they are known here even when the tree does not carry them
+// yet; otherwise "-dry-run" would reach pflag as the shorthand cluster
+// d,r,y,-,r,u,n.
+func axExecuteFlags() []string {
+	return []string{"format", "dry-run", "yes", "strict", "idempotency-key"}
+}
+
+// knownLongFlags collects every long flag name in the tree, plus
+// axExecuteFlags. Cobra registers help lazily, on whichever command it
+// dispatches, so each command is initialized here to keep "-help" rewritable
+// no matter where it appears.
 func knownLongFlags(root *cobra.Command) map[string]bool {
 	known := make(map[string]bool)
+	for _, name := range axExecuteFlags() {
+		known[name] = true
+	}
 	collect := func(flag *pflag.Flag) { known[flag.Name] = true }
 
 	var walk func(cmd *cobra.Command)

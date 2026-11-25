@@ -290,7 +290,7 @@ func TestReadRawRejectsInvalidHuJSON(t *testing.T) {
 	t.Parallel()
 	path := filepath.Join(t.TempDir(), "acl.json")
 	writeFile(t, path, `{"grants": [`)
-	if _, err := aclpolicy.ReadRaw(path); err == nil {
+	if _, err := (aclpolicy.Files{}).ReadRaw(path); err == nil {
 		t.Fatal("ReadRaw accepted invalid HuJSON")
 	}
 }

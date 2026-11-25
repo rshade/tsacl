@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"maps"
 	"slices"
 	"strings"
 
 	tailscale "tailscale.com/client/tailscale/v2"
+
+	"github.com/rshade/tsacl/pkg/policycore/errcode"
+	"github.com/rshade/tsacl/pkg/policycore/internal/coded"
 )
 
 // ParseRoster decodes an operator-supplied login-to-role roster.
@@ -35,9 +37,9 @@ func ParseRoster(data []byte) (map[string]tailscale.UserRole, error) {
 	var raw map[string]json.RawMessage
 	if err := json.Unmarshal(data, &raw); err != nil {
 		if syntax, ok := errors.AsType[*json.SyntaxError](err); ok {
-			return nil, fmt.Errorf("roster: invalid JSON at offset %d: %w", syntax.Offset, err)
+			return nil, coded.Errorf(errcode.RosterInvalid, "roster: invalid JSON at offset %d: %w", syntax.Offset, err)
 		}
-		return nil, fmt.Errorf("roster: invalid JSON: %w", err)
+		return nil, coded.Errorf(errcode.RosterInvalid, "roster: invalid JSON: %w", err)
 	}
 	// Requiring the value to be an array is what makes the sniff safe: a flat
 	// map may legitimately carry a key named "users", but its value is a role
@@ -62,7 +64,7 @@ type rosterUser struct {
 func parseRosterEnvelope(value json.RawMessage) (map[string]tailscale.UserRole, error) {
 	var users []rosterUser
 	if err := json.Unmarshal(value, &users); err != nil {
-		return nil, fmt.Errorf("roster: could not decode the users array: %w", err)
+		return nil, coded.Errorf(errcode.RosterInvalid, "roster: could not decode the users array: %w", err)
 	}
 	builder := newRosterBuilder(len(users))
 	for index, user := range users {
@@ -83,7 +85,7 @@ func parseRosterMap(raw map[string]json.RawMessage) (map[string]tailscale.UserRo
 	for index, login := range logins {
 		var role tailscale.UserRole
 		if err := json.Unmarshal(raw[login], &role); err != nil {
-			return nil, fmt.Errorf("roster: user %q has a non-string role", login)
+			return nil, coded.Errorf(errcode.RosterEntryInvalid, "roster: user %q has a non-string role", login)
 		}
 		if err := builder.add(login, role, index); err != nil {
 			return nil, err
@@ -110,17 +112,17 @@ func newRosterBuilder(size int) *rosterBuilder {
 func (b *rosterBuilder) add(login string, role tailscale.UserRole, index int) error {
 	trimmed := strings.TrimSpace(login)
 	if trimmed == "" {
-		return fmt.Errorf("roster: entry %d has an empty login name", index)
+		return coded.Errorf(errcode.RosterEntryInvalid, "roster: entry %d has an empty login name", index)
 	}
 	if !knownRole(role) {
-		return fmt.Errorf(
+		return coded.Errorf(errcode.RosterEntryInvalid,
 			"roster: user %q has unknown role %q; want %s",
 			trimmed, role, knownRoleList(),
 		)
 	}
 	key := strings.ToLower(trimmed)
 	if previous, ok := b.original[key]; ok {
-		return fmt.Errorf(
+		return coded.Errorf(errcode.RosterEntryInvalid,
 			"roster: login %q appears twice (as %q and %q)", key, previous, trimmed,
 		)
 	}

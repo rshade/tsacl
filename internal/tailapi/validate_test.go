@@ -15,6 +15,7 @@ import (
 
 	tailscale "tailscale.com/client/tailscale/v2"
 
+	"github.com/rshade/tsacl/internal/aclpolicy"
 	"github.com/rshade/tsacl/internal/tailapi"
 )
 
@@ -545,7 +546,7 @@ func TestValidateFilePreservesTypedErrorThroughPathContext(t *testing.T) {
 	if err = os.WriteFile(path, []byte(`{"grants": []}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	_, err = tailapi.ValidateFile(t.Context(), client, path)
+	_, err = tailapi.ValidateFile(t.Context(), client, aclpolicy.Files{}, path)
 	var validationErr *tailapi.ValidationError
 	if !errors.As(err, &validationErr) || len(validationErr.Data) != 1 ||
 		validationErr.Data[0].User != "u" || len(validationErr.Data[0].Errors) != 1 {
