@@ -12,7 +12,7 @@ trufflehog = "3.100.1"
 "go:github.com/google/go-licenses/v2" = "2.0.1"
 # Node only provides the npm backend for the two CLIs below.
 node = "26"
-"npm:markdownlint-cli" = "0.50.0"
+"npm:markdownlint-cli" = "0.50.1"
 # @commitlint/config-conventional installs nested inside the CLI, so
 # commitlint.config.js extends it without a second pin.
 "npm:@commitlint/cli" = "21.2.4"
