@@ -20,8 +20,8 @@ does not know any tool's report shape: each binary rebuilds its own output types
 from zero at the render boundary so a newly added field cannot pass through
 without an explicit decision.
 
-The `addrspace` subpackage compares route CIDRs and recognizes Tailscale 4via6
-prefixes, including extracting their embedded site IDs. It knows neither static
+The `addrspace` subpackage compares route CIDRs, recognizes Tailscale 4via6
+prefixes, and converts them to and from a site ID and an IPv4 prefix. It knows neither static
 policy shape nor live device state, and it does not decide whether an overlap or
 repeated site ID is intentional; callers own those classifications.
 
@@ -170,7 +170,7 @@ matched := policycore.SelectorMatches("group:eng", "ada@example.com", policy, ""
 
 This is a library module with no binary. Production `addrspace` code uses only
 the standard library. Its Tier-2 provenance test imports the pinned
-`tailscale.com/net/tsaddr` package to cross-validate the owned 4via6 decoder;
+`tailscale.com/net/tsaddr` package to cross-validate the owned 4via6 codec;
 no production package imports the full `tailscale.com` module.
 
 ## Documentation

@@ -10,7 +10,7 @@ import (
 )
 
 // TestSiteIDMatchesTailscale is the Tier-2 provenance guard for the owned
-// 4via6 decoder. It drives every currently valid site ID through the pinned
+// 4via6 codec. It drives every currently valid site ID through the pinned
 // Tailscale encoder so an upstream encoding change fails this module's tests.
 func TestSiteIDMatchesTailscale(t *testing.T) {
 	t.Parallel()
@@ -90,5 +90,12 @@ func assertMatchesTailscale(t *testing.T, siteID uint32, v4 netip.Prefix) {
 	}
 	if gotV4 := tsaddr.UnmapVia(via.Addr()); gotV4 != v4.Addr() {
 		t.Errorf("tsaddr.UnmapVia(tsaddr.MapVia(%d, %s)) = %s; want %s", siteID, v4, gotV4, v4.Addr())
+	}
+	if owned, mapped := addrspace.MapVia(siteID, v4); !mapped || owned != via {
+		t.Errorf("MapVia(%d, %s) = (%s, %v); want tsaddr's (%s, true)", siteID, v4, owned, mapped, via)
+	}
+	gotID, gotPrefix, unmapped := addrspace.UnmapVia(via)
+	if !unmapped || gotID != siteID || gotPrefix != v4 {
+		t.Errorf("UnmapVia(%s) = (%d, %s, %v); want (%d, %s, true)", via, gotID, gotPrefix, unmapped, siteID, v4)
 	}
 }
