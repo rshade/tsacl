@@ -383,7 +383,7 @@ func ValidateFile(
 // [ValidationError] or [ValidationIndeterminateError]; every failure before
 // validation returns a nil *Plan.
 func PlanFile(ctx context.Context, client *tailscale.Client, files aclpolicy.Files, path string) (*Plan, error) {
-	candidate, err := files.ReadRaw(path)
+	candidate, candidateTree, err := files.ReadParsed(path)
 	if err != nil {
 		return nil, err
 	}
@@ -400,13 +400,13 @@ func PlanFile(ctx context.Context, client *tailscale.Client, files aclpolicy.Fil
 		return nil, fmt.Errorf("validating %s: %w", path, err)
 	}
 
+	// The tree aliases candidate and Format rewrites it in place, so it may
+	// run only now that candidate has been submitted for validation.
+	candidateTree.Format()
+	candidateFormatted := candidateTree.Pack()
 	deployedFormatted, err := hujson.Format(deployed.HuJSON)
 	if err != nil {
 		return &Plan{Validation: validation}, fmt.Errorf("formatting deployed policy: %w", err)
-	}
-	candidateFormatted, err := hujson.Format(candidate)
-	if err != nil {
-		return &Plan{Validation: validation}, fmt.Errorf("formatting %s: %w", path, err)
 	}
 
 	diff := policydiff.Unified("deployed", deployedFormatted, path, candidateFormatted)

@@ -320,9 +320,11 @@ func TestFetchPolicyReportsNonSuccess(t *testing.T) {
 func TestPlanFileReturnsValidatedUnifiedDiffAndETag(t *testing.T) {
 	t.Parallel()
 	path := filepath.Join(t.TempDir(), "candidate.hujson")
-	if err := os.WriteFile(path, []byte(`{
-		"grants": [{"src": ["*"], "dst": ["tag:web"], "ip": ["tcp:443"]}],
-	}`), 0o644); err != nil {
+	// Formatting rewrites the four-space indent to a tab inside the buffer the
+	// file was read into, so a candidate formatted before it was submitted
+	// fails the exact-bytes check below.
+	const candidate = "{\n    \"grants\": [{\"src\": [\"*\"], \"dst\": [\"tag:web\"], \"ip\": [\"tcp:443\"]}],\n}\n"
+	if err := os.WriteFile(path, []byte(candidate), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -338,8 +340,8 @@ func TestPlanFileReturnsValidatedUnifiedDiffAndETag(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
-			if !strings.Contains(string(body), `"tag:web"`) {
-				t.Errorf("validation body = %q, want candidate policy", body)
+			if string(body) != candidate {
+				t.Errorf("validation body = %q, want the candidate's exact bytes %q", body, candidate)
 			}
 		default:
 			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)

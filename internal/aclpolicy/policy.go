@@ -166,14 +166,24 @@ func checkDuplicateMembers(document hujson.Value) error {
 // ReadRaw reads path under f's limit and verifies that it contains
 // syntactically valid HuJSON, returning the bytes exactly as read.
 func (f Files) ReadRaw(path string) ([]byte, error) {
+	b, _, err := f.ReadParsed(path)
+	return b, err
+}
+
+// ReadParsed is ReadRaw that also returns the syntax tree it parsed, so a
+// caller that needs both pays for one parse. The tree aliases the returned
+// bytes, and hujson's Format, Minimize, Standardize, and Patch rewrite it in
+// place: finish with the bytes before transforming the tree.
+func (f Files) ReadParsed(path string) ([]byte, hujson.Value, error) {
 	b, err := f.Limits.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return nil, hujson.Value{}, err
 	}
-	if _, err = hujsonedit.Parse(path, b); err != nil {
-		return nil, err
+	tree, err := hujsonedit.Parse(path, b)
+	if err != nil {
+		return nil, hujson.Value{}, err
 	}
-	return b, nil
+	return b, tree, nil
 }
 
 // Normalize reads path and returns its contents as standard JSON. HuJSON-only
