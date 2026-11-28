@@ -15,7 +15,7 @@ node = "26"
 "npm:markdownlint-cli" = "0.50.1"
 # @commitlint/config-conventional installs nested inside the CLI, so
 # commitlint.config.js extends it without a second pin.
-"npm:@commitlint/cli" = "21.2.4"
+"npm:@commitlint/cli" = "21.3.0"
 
 [tasks.lint]
 description = "Run every check"
